@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="wp-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C6FEE"/>
+      <stop offset="0.55" stop-color="#4A3DC4"/>
+      <stop offset="1" stop-color="#241D66"/>
+    </linearGradient>
+    <linearGradient id="wp-sheen" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="wp-col-done" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#FF8C1A"/>
+      <stop offset="1" stop-color="#FFC77A"/>
+    </linearGradient>
+    <radialGradient id="wp-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFA83D" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFA83D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded-square badge with a hairline inner edge + soft top sheen for depth -->
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#wp-bg)"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="16.5" fill="none" stroke="#B6BEFA" stroke-opacity="0.35"/>
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#wp-sheen)"/>
+
+  <!-- Soft glow behind the completed column -->
+  <circle cx="44" cy="24" r="14" fill="url(#wp-glow)"/>
+
+  <!-- Three kanban columns of rising height: To Do / In Progress / Done —
+       the universal "project board" symbol, legible even at 16px. -->
+  <rect x="15" y="34" width="8.5" height="16" rx="3" fill="#EEF0FE" fill-opacity="0.9"/>
+  <rect x="27.75" y="26" width="8.5" height="24" rx="3" fill="#EEF0FE" fill-opacity="0.65"/>
+  <rect x="40.5" y="16" width="8.5" height="34" rx="3" fill="url(#wp-col-done)"/>
+
+  <!-- Checkmark on the "Done" column -->
+  <path
+    d="M42.3 32.2 L44.5 34.6 L48.5 29.5"
+    fill="none"
+    stroke="#3A2F9E"
+    stroke-width="2.3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
