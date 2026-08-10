@@ -11,6 +11,7 @@ const RefreshToken = require('./RefreshToken');
 const Invite = require('./Invite');
 const TimeEntry = require('./TimeEntry');
 const Meeting = require('./Meeting');
+const MeetingAttendee = require('./MeetingAttendee');
 const TaskDependency = require('./TaskDependency');
 
 // ---------------- Associations ----------------
@@ -108,9 +109,27 @@ TimeEntry.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
 Task.hasMany(TimeEntry, { foreignKey: 'taskId', onDelete: 'SET NULL', as: 'timeEntries' });
 TimeEntry.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
 
-// User <-> Meeting (a personal agenda entry)
-User.hasMany(Meeting, { foreignKey: 'userId', onDelete: 'CASCADE', as: 'meetings' });
-Meeting.belongsTo(User, { foreignKey: 'userId' });
+// User <-> Meeting: `userId` is the organizer (the meeting's owner/creator).
+User.hasMany(Meeting, { foreignKey: 'userId', onDelete: 'CASCADE', as: 'organizedMeetings' });
+Meeting.belongsTo(User, { foreignKey: 'userId', as: 'organizer' });
+
+// Meeting <-> User (many-to-many via MeetingAttendee) — everyone invited,
+// including the organizer, who is always also an attendee row.
+Meeting.belongsToMany(User, {
+  through: MeetingAttendee,
+  foreignKey: 'meetingId',
+  otherKey: 'userId',
+  as: 'attendees',
+});
+User.belongsToMany(Meeting, {
+  through: MeetingAttendee,
+  foreignKey: 'userId',
+  otherKey: 'meetingId',
+  as: 'meetings',
+});
+Meeting.hasMany(MeetingAttendee, { foreignKey: 'meetingId', onDelete: 'CASCADE', as: 'attendeeLinks' });
+MeetingAttendee.belongsTo(Meeting, { foreignKey: 'meetingId' });
+MeetingAttendee.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = {
   sequelize,
@@ -126,5 +145,6 @@ module.exports = {
   Invite,
   TimeEntry,
   Meeting,
+  MeetingAttendee,
   TaskDependency,
 };

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ListChecks,
   CheckCircle2,
@@ -71,6 +72,7 @@ function MemberPicker({ members, selectedId, onSelect }) {
 }
 
 export default function MemberReports({ basePath }) {
+  const [searchParams] = useSearchParams();
   const [members, setMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
@@ -83,12 +85,19 @@ export default function MemberReports({ basePath }) {
       if (cancelled) return;
       const list = data.data.users;
       setMembers(list);
-      if (list.length) setSelectedId(list[0].id);
+      // Deep-link from elsewhere in the app (e.g. My Team's "View full
+      // report") — only honor it if that id is actually in this list,
+      // otherwise fall back to the usual "first member" default.
+      const requestedId = searchParams.get('member');
+      const requested = requestedId && list.find((m) => m.id === requestedId);
+      if (requested) setSelectedId(requested.id);
+      else if (list.length) setSelectedId(list[0].id);
       setMembersLoading(false);
     });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

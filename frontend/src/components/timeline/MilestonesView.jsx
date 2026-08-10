@@ -82,7 +82,12 @@ function countdownLabel(date, now) {
 // blocked (task milestones, via TaskDependency) or how far along its
 // project's task list is (project deadlines) — not just where it sits
 // on the calendar.
-export default function MilestonesView({ tasks = [], projects = [], basePath = '/admin/tasks' }) {
+// `compact` is for embedding this view inside a fixed-size container (the
+// dashboard's TimelineWidget) where switching to Milestones must NOT grow
+// the card and push the rest of the dashboard grid around. It trims the
+// chrome (filter bar, group-by toggle, axis) and caps the list in its own
+// scroll area instead of letting it grow with the content.
+export default function MilestonesView({ tasks = [], projects = [], basePath = '/admin/tasks', projectsBasePath = '/admin/projects', compact = false }) {
   const [filter, setFilter] = useState('all');
   const [groupBy, setGroupBy] = useState('date'); // 'date' | 'project'
   const now = new Date();
@@ -175,111 +180,123 @@ export default function MilestonesView({ tasks = [], projects = [], basePath = '
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Stat + filter bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setFilter(f.key)}
-              className={clsx(
-                'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                filter === f.key
-                  ? 'border-ink bg-ink text-white shadow-sm'
-                  : 'border-line bg-surface text-ink-muted hover:border-ink-muted/40 hover:text-ink'
-              )}
-            >
-              {f.label}
-              <span
+      {/* Stat + filter bar — dropped in compact mode so the widget's fixed
+          shell doesn't gain an extra row of chrome. */}
+      {!compact && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
                 className={clsx(
-                  'rounded-full px-1.5 py-px font-mono text-[10px]',
-                  filter === f.key ? 'bg-white/15 text-white' : 'bg-paper text-ink-muted'
+                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                  filter === f.key
+                    ? 'border-ink bg-ink text-white shadow-sm'
+                    : 'border-line bg-surface text-ink-muted hover:border-ink-muted/40 hover:text-ink'
                 )}
               >
-                {counts[f.key]}
-              </span>
-            </button>
-          ))}
-        </div>
+                {f.label}
+                <span
+                  className={clsx(
+                    'rounded-full px-1.5 py-px font-mono text-[10px]',
+                    filter === f.key ? 'bg-white/15 text-white' : 'bg-paper text-ink-muted'
+                  )}
+                >
+                  {counts[f.key]}
+                </span>
+              </button>
+            ))}
+          </div>
 
-        <div className="inline-flex items-center rounded-lg border border-line bg-surface p-0.5 text-xs">
-          {[
-            { key: 'date', label: 'By date' },
-            { key: 'project', label: 'By project' },
-          ].map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setGroupBy(opt.key)}
-              className={clsx(
-                'rounded-md px-2.5 py-1 font-medium transition-colors',
-                groupBy === opt.key ? 'bg-route-500 text-white shadow-sm' : 'text-ink-muted hover:bg-paper hover:text-ink'
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
+          <div className="inline-flex items-center rounded-lg border border-line bg-surface p-0.5 text-xs">
+            {[
+              { key: 'date', label: 'By date' },
+              { key: 'project', label: 'By project' },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setGroupBy(opt.key)}
+                className={clsx(
+                  'rounded-md px-2.5 py-1 font-medium transition-colors',
+                  groupBy === opt.key ? 'bg-route-500 text-white shadow-sm' : 'text-ink-muted hover:bg-paper hover:text-ink'
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Spotlight: the next thing that isn't done yet */}
       {nextUp && (
-        <NextUpCard item={nextUp} now={now} basePath={basePath} />
+        <NextUpCard item={nextUp} now={now} basePath={basePath} projectsBasePath={projectsBasePath} />
       )}
 
-      {/* Axis */}
-      <div className="route-line relative mx-2 h-px">
-        {todayPct != null && (
-          <div className="absolute -top-2 z-10" style={{ left: `${todayPct}%` }} title="Today">
-            <div className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 rounded-full bg-gradient-to-br from-accent-300/40 to-transparent blur-[3px]" />
-            <div className="h-4 w-px bg-accent-500/80" />
+      {/* Axis — decorative, and not worth the width in a narrow widget */}
+      {!compact && (
+        <div className="route-line relative mx-2 h-px">
+          {todayPct != null && (
+            <div className="absolute -top-2 z-10" style={{ left: `${todayPct}%` }} title="Today">
+              <div className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 rounded-full bg-gradient-to-br from-accent-300/40 to-transparent blur-[3px]" />
+              <div className="h-4 w-px bg-accent-500/80" />
+            </div>
+          )}
+          {items.map((item) => {
+            const pct = (diffDays(item.date, rangeStart) / totalSpan) * 100;
+            const meta = STATUS_META[deriveStatus(item, now)];
+            return (
+              <div
+                key={`${item.kind}-${item.id}`}
+                className="group absolute -top-1.5 flex flex-col items-center"
+                style={{ left: `${pct}%` }}
+                title={`${item.title} · ${formatShort(item.date)}`}
+              >
+                {item.kind === 'project' ? (
+                  <Flag className={clsx('h-3 w-3 transition-transform group-hover:scale-125', meta.ring)} />
+                ) : (
+                  <Diamond className={clsx('h-2.5 w-2.5 fill-current transition-transform group-hover:scale-125', meta.ring)} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Groups — in compact mode this sits in its own capped, scrollable
+          area so picking the Milestones tab never changes the widget's
+          overall height (which would otherwise shove the rest of the
+          dashboard grid down every time someone switches tabs). */}
+      <div className={compact ? 'max-h-[280px] overflow-y-auto pr-1' : undefined}>
+        {filtered.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-line bg-paper/50 px-4 py-8 text-center text-sm text-ink-muted">
+            Nothing in this view. Try a different filter.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {groups.map(([label, groupItems]) => (
+              <div key={label} className="flex flex-col gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
+                <div className={clsx('grid grid-cols-1 gap-3', compact ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
+                  {groupItems.map((item) => (
+                    <MilestoneCard key={`${item.kind}-${item.id}-card`} item={item} now={now} basePath={basePath} projectsBasePath={projectsBasePath} compact={compact} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        {items.map((item) => {
-          const pct = (diffDays(item.date, rangeStart) / totalSpan) * 100;
-          const meta = STATUS_META[deriveStatus(item, now)];
-          return (
-            <div
-              key={`${item.kind}-${item.id}`}
-              className="group absolute -top-1.5 flex flex-col items-center"
-              style={{ left: `${pct}%` }}
-              title={`${item.title} · ${formatShort(item.date)}`}
-            >
-              {item.kind === 'project' ? (
-                <Flag className={clsx('h-3 w-3 transition-transform group-hover:scale-125', meta.ring)} />
-              ) : (
-                <Diamond className={clsx('h-2.5 w-2.5 fill-current transition-transform group-hover:scale-125', meta.ring)} />
-              )}
-            </div>
-          );
-        })}
       </div>
-
-      {/* Groups */}
-      {filtered.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-line bg-paper/50 px-4 py-8 text-center text-sm text-ink-muted">
-          Nothing in this view. Try a different filter.
-        </p>
-      ) : (
-        groups.map(([label, groupItems]) => (
-          <div key={label} className="flex flex-col gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {groupItems.map((item) => (
-                <MilestoneCard key={`${item.kind}-${item.id}-card`} item={item} now={now} basePath={basePath} />
-              ))}
-            </div>
-          </div>
-        ))
-      )}
     </div>
   );
 }
 
-function NextUpCard({ item, now, basePath }) {
+function NextUpCard({ item, now, basePath, projectsBasePath = '/admin/projects' }) {
   const meta = STATUS_META[item.status];
-  const href = item.kind === 'task' ? `${basePath}/${item.id}` : `/admin/projects/${item.id}`;
+  const href = item.kind === 'task' ? `${basePath}/${item.id}` : `${projectsBasePath}/${item.id}`;
 
   return (
     <Link
@@ -317,11 +334,14 @@ function NextUpCard({ item, now, basePath }) {
   );
 }
 
-function MilestoneCard({ item, now, basePath }) {
+function MilestoneCard({ item, now, basePath, projectsBasePath = '/admin/projects', compact = false }) {
   const meta = STATUS_META[item.status];
-  const href = item.kind === 'task' ? `${basePath}/${item.id}` : `/admin/projects/${item.id}`;
-  const hasBlockers = item.kind === 'task' && item.blockers.length > 0;
-  const hasProjectProgress = item.kind === 'project' && item.taskTotal > 0;
+  const href = item.kind === 'task' ? `${basePath}/${item.id}` : `${projectsBasePath}/${item.id}`;
+  // In compact mode, skip the blockers checklist and progress bar — they're
+  // what made cards balloon to very different heights and disturb the
+  // dashboard layout. The full detail is one click away on the task/project.
+  const hasBlockers = !compact && item.kind === 'task' && item.blockers.length > 0;
+  const hasProjectProgress = !compact && item.kind === 'project' && item.taskTotal > 0;
 
   return (
     <TiltCard maxTilt={4} className="h-full rounded-lg">

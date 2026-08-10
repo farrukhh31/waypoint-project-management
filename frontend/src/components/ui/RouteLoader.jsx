@@ -53,7 +53,7 @@ export default function RouteLoader({ size = 'md', label, className }) {
             cy={c}
             r={r + s.stroke + s.bezelGap}
             fill="none"
-            stroke="#AECBE3"
+            stroke="rgb(var(--color-ink-muted) / 0.5)"
             strokeWidth="1"
             strokeDasharray="1 7"
             strokeLinecap="round"
@@ -61,7 +61,7 @@ export default function RouteLoader({ size = 'md', label, className }) {
           />
 
           {/* Track */}
-          <circle cx={c} cy={c} r={r} fill="none" stroke="#EEF4FA" strokeWidth={s.stroke} />
+          <circle cx={c} cy={c} r={r} fill="none" stroke="rgb(var(--color-line) / 1)" strokeWidth={s.stroke} />
 
           {/* Gradient progress arc */}
           <circle

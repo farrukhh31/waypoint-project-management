@@ -13,7 +13,7 @@ function taskStatsFor(userId, tasks) {
   return { total: assigned.length, completed, pct };
 }
 
-function PersonNode({ person, roleLabel, isManager = false, tasks, canRemove, onRemove, removing, style }) {
+function PersonNode({ person, roleLabel, isManager = false, tasks, canRemove, onRemove, removing, onSelect, style }) {
   const stats = taskStatsFor(person.id, tasks);
 
   return (
@@ -37,29 +37,37 @@ function PersonNode({ person, roleLabel, isManager = false, tasks, canRemove, on
         </button>
       )}
 
-      <span className="relative">
-        <Avatar name={person.name} size="lg" className="ring-2 ring-surface" />
-        {isManager && (
-          <Crown className="absolute -right-1.5 -top-2 h-4 w-4 rounded-full bg-accent-400 p-[2px] text-white" strokeWidth={2.5} />
-        )}
-      </span>
-
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-ink">{person.name}</p>
-        <p className="flex items-center justify-center gap-1 truncate text-[11px] text-ink-muted">
-          <Mail className="h-3 w-3 shrink-0" />
-          {person.email}
-        </p>
-      </div>
-
-      <span
-        className={clsx(
-          'rounded-full px-2.5 py-0.5 text-[11px] font-medium',
-          isManager ? 'bg-accent-100 text-accent-700' : 'bg-route-100 text-route-700'
-        )}
+      {/* The whole card opens that person's profile — clicking a name in the
+          org chart shouldn't dead-end; it should take you to who they are. */}
+      <button
+        type="button"
+        onClick={() => onSelect?.(person.id)}
+        className="flex w-full flex-col items-center gap-2 rounded-lg text-left"
       >
-        {roleLabel}
-      </span>
+        <span className="relative">
+          <Avatar name={person.name} size="lg" className="ring-2 ring-surface" />
+          {isManager && (
+            <Crown className="absolute -right-1.5 -top-2 h-4 w-4 rounded-full bg-accent-400 p-[2px] text-white" strokeWidth={2.5} />
+          )}
+        </span>
+
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-ink group-hover:text-route-600">{person.name}</p>
+          <p className="flex items-center justify-center gap-1 truncate text-[11px] text-ink-muted">
+            <Mail className="h-3 w-3 shrink-0" />
+            {person.email}
+          </p>
+        </div>
+
+        <span
+          className={clsx(
+            'rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+            isManager ? 'bg-accent-100 text-accent-700' : 'bg-route-100 text-route-700'
+          )}
+        >
+          {roleLabel}
+        </span>
+      </button>
 
       <div className="flex w-full flex-col gap-1 border-t border-line pt-2.5">
         <div className="flex items-center justify-between text-[11px] text-ink-muted">
@@ -83,7 +91,7 @@ function PersonNode({ person, roleLabel, isManager = false, tasks, canRemove, on
   );
 }
 
-export default function TeamChartModal({ open, onClose, project, tasks, canManage, onRemoveMember, removingId }) {
+export default function TeamChartModal({ open, onClose, project, tasks, canManage, onRemoveMember, removingId, onSelectPerson }) {
   if (!project) return null;
   const members = project.members || [];
   const teamSize = members.length + (project.manager ? 1 : 0);
@@ -106,6 +114,7 @@ export default function TeamChartModal({ open, onClose, project, tasks, canManag
                   roleLabel="Project Manager"
                   isManager
                   tasks={tasks}
+                  onSelect={onSelectPerson}
                   style={{ animation: 'fade-in-up 0.3s ease-out both' }}
                 />
                 {members.length > 0 && <div className="route-line-v h-8" aria-hidden="true" />}
@@ -124,6 +133,7 @@ export default function TeamChartModal({ open, onClose, project, tasks, canManag
                       canRemove={canManage}
                       onRemove={onRemoveMember}
                       removing={removingId === member.id}
+                      onSelect={onSelectPerson}
                       style={{ animation: `fade-in-up 0.3s ease-out ${Math.min(i * 60, 300)}ms both` }}
                     />
                   </div>

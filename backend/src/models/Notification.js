@@ -20,7 +20,10 @@ Notification.init(
         'TASK_CHANGES_REQUESTED',
         'PROJECT_SUBMITTED',
         'PROJECT_APPROVED',
-        'PROJECT_CHANGES_REQUESTED'
+        'PROJECT_CHANGES_REQUESTED',
+        'MEETING_INVITE',
+        'MEETING_REMINDER',
+        'MEETING_CANCELLED'
       ),
       allowNull: false,
     },

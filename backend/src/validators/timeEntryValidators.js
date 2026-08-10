@@ -6,6 +6,12 @@ const startTimeEntrySchema = z.object({
   taskId: z.string().min(1).optional().nullable(),
 });
 
+const updateTimeEntrySchema = z.object({
+  label: z.string().min(1).max(200).optional(),
+  projectId: z.string().min(1).optional().nullable(),
+  taskId: z.string().min(1).optional().nullable(),
+});
+
 const idParamSchema = z.object({ id: z.string().min(1) });
 
-module.exports = { startTimeEntrySchema, idParamSchema };
+module.exports = { startTimeEntrySchema, updateTimeEntrySchema, idParamSchema };

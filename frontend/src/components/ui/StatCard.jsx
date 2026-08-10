@@ -6,37 +6,41 @@ import TiltCard from './TiltCard.jsx';
 
 // Each accent gets a quiet gradient wash across the whole card (not just
 // the icon chip) — reads as "premium" without needing a fake trend number
-// we don't have the historical data to back up honestly.
+// we don't have the historical data to back up honestly. Washes are built
+// from the accent's own hue at low opacity (rather than a fixed -50/-100
+// pastel swatch) so the same classes hold up over both a white surface
+// and a dark one — the tint just reads as "a touch of that color," not a
+// hardcoded light-mode patch.
 const ACCENTS = {
   route: {
-    card: 'bg-gradient-to-br from-route-50 via-surface to-surface',
+    card: 'bg-gradient-to-br from-route-500/[0.09] via-surface to-surface',
     chip: 'bg-route-500 text-white shadow-route-500/30',
-    ghost: 'border-route-200/70 bg-route-100/40',
+    ghost: 'border-route-400/30 bg-route-400/10',
   },
   accent: {
-    card: 'bg-gradient-to-br from-accent-50 via-surface to-surface',
+    card: 'bg-gradient-to-br from-accent-400/[0.09] via-surface to-surface',
     chip: 'bg-accent-400 text-white shadow-accent-400/30',
-    ghost: 'border-accent-200/70 bg-accent-100/40',
+    ghost: 'border-accent-400/30 bg-accent-400/10',
   },
   success: {
-    card: 'bg-gradient-to-br from-success-50 via-surface to-surface',
+    card: 'bg-gradient-to-br from-success-400/[0.09] via-surface to-surface',
     chip: 'bg-success-400 text-white shadow-success-400/30',
-    ghost: 'border-success-200/70 bg-success-50',
+    ghost: 'border-success-400/30 bg-success-400/10',
   },
   danger: {
-    card: 'bg-gradient-to-br from-danger-50 via-surface to-surface',
+    card: 'bg-gradient-to-br from-danger-400/[0.09] via-surface to-surface',
     chip: 'bg-danger-400 text-white shadow-danger-400/30',
-    ghost: 'border-danger-200/70 bg-danger-50',
+    ghost: 'border-danger-400/30 bg-danger-400/10',
   },
   sky: {
-    card: 'bg-gradient-to-br from-sky-50 via-surface to-surface',
+    card: 'bg-gradient-to-br from-sky-400/[0.09] via-surface to-surface',
     chip: 'bg-sky-400 text-white shadow-sky-400/30',
-    ghost: 'border-sky-200/70 bg-sky-50',
+    ghost: 'border-sky-400/30 bg-sky-400/10',
   },
   teal: {
-    card: 'bg-gradient-to-br from-teal-50 via-surface to-surface',
+    card: 'bg-gradient-to-br from-teal-400/[0.09] via-surface to-surface',
     chip: 'bg-teal-400 text-white shadow-teal-400/30',
-    ghost: 'border-teal-200/70 bg-teal-50',
+    ghost: 'border-teal-400/30 bg-teal-400/10',
   },
 };
 
@@ -84,7 +88,7 @@ export default function StatCard({ label, value, icon: Icon, accent = 'route', h
   const card = (
     <Card
       className={clsx(
-        'group relative flex flex-col justify-between overflow-hidden p-5 transition-shadow duration-200 hover:shadow-pop',
+        'group relative flex flex-col justify-between overflow-hidden p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-line hover:shadow-pop',
         STAT_CARD_HEIGHT,
         tones.card
       )}

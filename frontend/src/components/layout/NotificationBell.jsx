@@ -26,12 +26,15 @@ export default function NotificationBell({ homePath }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-soft hover:bg-paper"
+        className={clsx(
+          'relative flex h-9 w-9 items-center justify-center rounded-full text-ink-soft transition-colors duration-150 hover:bg-paper',
+          open && 'bg-paper'
+        )}
         aria-label="Notifications"
       >
-        <Bell className="h-4.5 w-4.5" />
+        <Bell className={clsx('h-4.5 w-4.5 transition-transform duration-200', open && 'rotate-12')} />
         {unreadCount > 0 && (
-          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-400 px-1 text-[10px] font-semibold leading-none text-white">
+          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-400 px-1 text-[10px] font-semibold leading-none text-white animate-modal-pop">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -39,7 +42,7 @@ export default function NotificationBell({ homePath }) {
 
       {open && (
         <div
-          className="absolute right-0 top-11 z-20 w-80 overflow-hidden rounded border border-line bg-surface shadow-pop"
+          className="absolute right-0 top-11 z-20 w-80 origin-top-right overflow-hidden rounded border border-line bg-surface shadow-pop animate-modal-pop"
           onMouseLeave={() => setOpen(false)}
         >
           <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
@@ -59,13 +62,17 @@ export default function NotificationBell({ homePath }) {
             <p className="px-3.5 py-6 text-center text-sm text-ink-muted">You're all caught up.</p>
           ) : (
             <ul className="max-h-80 divide-y divide-line overflow-y-auto">
-              {preview.map((n) => (
-                <li key={n.id}>
+              {preview.map((n, i) => (
+                <li
+                  key={n.id}
+                  className="animate-[fade-in-up_0.25s_ease-out_both]"
+                  style={{ animationDelay: `${i * 30}ms` }}
+                >
                   <button
                     type="button"
                     onClick={() => handleItemClick(n)}
                     className={clsx(
-                      'flex w-full flex-col items-start gap-0.5 px-3.5 py-2.5 text-left hover:bg-paper',
+                      'flex w-full flex-col items-start gap-0.5 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-paper',
                       !n.isRead && 'bg-route-50/40'
                     )}
                   >

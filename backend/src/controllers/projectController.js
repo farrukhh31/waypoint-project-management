@@ -34,9 +34,9 @@ async function findIncompleteTasks(projectId) {
   });
 }
 
-// GET /api/projects?search=&status=&priority=&sortBy=&order=&page=&limit=
+// GET /api/projects?search=&status=&priority=&overdue=&sortBy=&order=&page=&limit=
 const listProjects = catchAsync(async (req, res) => {
-  const { search, status, priority, sortBy, order, page, limit } = req.query;
+  const { search, status, priority, overdue, sortBy, order, page, limit } = req.query;
   const { user } = req;
 
   const where = {};
@@ -53,6 +53,24 @@ const listProjects = catchAsync(async (req, res) => {
   }
   // ADMIN: no extra scoping — sees everything
 
+  // Projects with at least one open task past its due date — powers the
+  // "Overdue" filter pill on this page. The Tasks list has its own,
+  // task-level overdue filter (GET /tasks?status=OVERDUE); this one stays
+  // project-scoped so a manager can see which of their projects need
+  // attention without leaving the Projects view.
+  const overdueTaskRows = await Task.findAll({
+    where: { status: { [Op.ne]: 'COMPLETED' }, dueDate: { [Op.lt]: new Date() } },
+    attributes: ['projectId'],
+    group: ['projectId'],
+  });
+  const overdueProjectIds = overdueTaskRows.map((t) => t.projectId);
+
+  if (overdue === 'true') {
+    where.id = where.id
+      ? { [Op.in]: where.id[Op.in].filter((id) => overdueProjectIds.includes(id)) }
+      : { [Op.in]: overdueProjectIds };
+  }
+
   const { limit: limitNum, offset, page: pageNum } = paginationParams(page, limit);
 
   const { rows, count } = await Project.findAndCountAll({
@@ -66,16 +84,20 @@ const listProjects = catchAsync(async (req, res) => {
 
   // Lightweight per-project task progress for the current page only —
   // cheap enough to compute on every list call, and lets the UI show a
-  // real completion bar instead of just a status pill.
+  // real completion bar instead of just a status pill. `overdue` counts
+  // open tasks already past their due date, so a project card can flag
+  // exactly how many of its tasks need attention.
   const projectIds = rows.map((p) => p.id);
   const taskRows = projectIds.length
-    ? await Task.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ['projectId', 'status'] })
+    ? await Task.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ['projectId', 'status', 'dueDate'] })
     : [];
+  const now = new Date();
   const progressByProject = {};
-  for (const id of projectIds) progressByProject[id] = { total: 0, completed: 0 };
+  for (const id of projectIds) progressByProject[id] = { total: 0, completed: 0, overdue: 0 };
   for (const t of taskRows) {
     progressByProject[t.projectId].total += 1;
     if (t.status === 'COMPLETED') progressByProject[t.projectId].completed += 1;
+    else if (t.dueDate && new Date(t.dueDate) < now) progressByProject[t.projectId].overdue += 1;
   }
   const projects = rows.map((p) => ({ ...p.toJSON(), progress: progressByProject[p.id] }));
 
@@ -93,7 +115,12 @@ const listProjects = catchAsync(async (req, res) => {
 
   res.json({
     success: true,
-    data: { projects, pagination: paginationMeta(pageNum, limitNum, count), statusCounts },
+    data: {
+      projects,
+      pagination: paginationMeta(pageNum, limitNum, count),
+      statusCounts,
+      overdueCount: overdueProjectIds.length,
+    },
   });
 });
 

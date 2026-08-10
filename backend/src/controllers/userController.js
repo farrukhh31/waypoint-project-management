@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
-const { User, Task, Project, ActivityLog, RefreshToken } = require('../models');
+const { User, Task, Project, ProjectMember, ActivityLog, RefreshToken } = require('../models');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { buildSort, containsInsensitive, paginationParams, paginationMeta } = require('../utils/queryHelpers');
@@ -53,9 +53,23 @@ const listUsers = catchAsync(async (req, res) => {
   });
 });
 
+// GET /api/users/:id — Admin can view anyone. A Project Manager can only
+// view someone who's actually a member of one of their own projects (the
+// My Team roster) or their own record — never an arbitrary org-wide id.
 const getUser = catchAsync(async (req, res) => {
   const user = await User.findByPk(req.params.id);
   if (!user) throw ApiError.notFound('User not found.');
+
+  if (req.user.role === 'PROJECT_MANAGER' && req.user.id !== user.id) {
+    const managedProjectIds = (await Project.findAll({ where: { managerId: req.user.id }, attributes: ['id'] })).map(
+      (p) => p.id
+    );
+    const isOnTeam = managedProjectIds.length
+      ? await ProjectMember.findOne({ where: { userId: user.id, projectId: { [Op.in]: managedProjectIds } } })
+      : null;
+    if (!isOnTeam) throw ApiError.forbidden('You can only view profiles of people on your own projects.');
+  }
+
   res.json({ success: true, data: { user: user.toSafeJSON() } });
 });
 

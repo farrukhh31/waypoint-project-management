@@ -10,6 +10,7 @@ router.post('/login', validate({ body: loginSchema }), authController.login);
 router.post('/verify-2fa', validate({ body: verifyTwoFactorSchema }), authController.verifyTwoFactor);
 router.post('/refresh', validate({ body: refreshSchema }), authController.refresh);
 router.post('/logout', authController.logout);
+router.post('/logout-all', authenticate, authController.logoutAllOtherSessions);
 router.get('/me', authenticate, authController.me);
 
 module.exports = router;

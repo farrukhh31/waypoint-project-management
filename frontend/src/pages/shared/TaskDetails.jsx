@@ -32,7 +32,7 @@ import SubmissionModal from '../../components/shared/SubmissionModal.jsx';
 import SubmissionPanel from '../../components/shared/SubmissionPanel.jsx';
 import TaskForm from '../../components/forms/TaskForm.jsx';
 import { PRIORITY_META, TASK_STATUS_META } from '../../config/statuses';
-import { formatDate, formatDueDate } from '../../utils/formatDate';
+import { formatDate, formatDueDate, getDeadlineUrgency } from '../../utils/formatDate';
 
 // Same "tone" idea as PROJECT_STATUS_TONE (config/statuses.js) but for a
 // task's own status — drives the hero gradient wash and the progress ring
@@ -190,7 +190,9 @@ export default function TaskDetails() {
   const canSubmitForReview = isAssignee && (task.status === 'TODO' || task.status === 'IN_PROGRESS');
   const awaitingReview = task.status === 'REVIEW';
   const dueLabel = formatDueDate(task.dueDate);
-  const isOverdue = dueLabel.includes('overdue') && task.status !== 'COMPLETED';
+  const dueUrgency = getDeadlineUrgency(task.dueDate, task.status);
+  const isOverdue = dueUrgency === 'overdue';
+  const isDueSoon = dueUrgency === 'soon';
   const progressPct = Math.max(0, Math.min(100, task.progress ?? 0));
   const portalRoot = window.location.pathname.split('/tasks/')[0];
   const tasksBasePath = `${portalRoot}/tasks`;
@@ -305,7 +307,7 @@ export default function TaskDetails() {
               icon={CalendarDays}
               label="Due date"
               value={dueLabel === '—' ? formatDate(task.dueDate) : dueLabel}
-              tone={isOverdue ? 'bg-danger-50 text-danger-600' : 'bg-ink-muted/10 text-ink-soft'}
+              tone={isOverdue ? 'bg-danger-50 text-danger-600' : isDueSoon ? 'bg-accent-50 text-accent-600' : 'bg-ink-muted/10 text-ink-soft'}
             />
             <StatChip
               icon={CalendarDays}

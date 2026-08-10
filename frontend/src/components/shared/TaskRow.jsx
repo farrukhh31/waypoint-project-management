@@ -1,18 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Eye, Send } from 'lucide-react';
+import { Eye, Send, AlertTriangle, CalendarDays, Flame } from 'lucide-react';
 import clsx from 'clsx';
 import Badge from '../ui/Badge.jsx';
 import Avatar from '../ui/Avatar.jsx';
-import { TASK_STATUS_META, PRIORITY_META } from '../../config/statuses';
-import { formatDueDate } from '../../utils/formatDate';
+import { TASK_STATUS_META, TASK_STATUS_TONE, PRIORITY_META } from '../../config/statuses';
+import { formatDueDate, isDeadlineCritical } from '../../utils/formatDate';
 import { ROLES } from '../../config/roles';
-
-const STATUS_DOT = {
-  TODO: 'bg-ink-muted',
-  IN_PROGRESS: 'bg-route-500',
-  REVIEW: 'bg-accent-400',
-  COMPLETED: 'bg-success-400',
-};
 
 /**
  * @param {string} [viewerRole] - current user's role, used to tailor the
@@ -26,7 +19,13 @@ const STATUS_DOT = {
 export default function TaskRow({ task, basePath, showAssignee = true, viewerRole, viewerId }) {
   const dueLabel = formatDueDate(task.dueDate);
   const isOverdue = dueLabel.includes('overdue') && task.status !== 'COMPLETED';
+  const isCritical = isDeadlineCritical(task.dueDate, task.status);
   const inReview = task.status === 'REVIEW';
+  // Overdue is a date fact layered on top of whichever real status the task
+  // is in (never COMPLETED, see above) — it drives the accent bar so an
+  // overdue TODO or REVIEW task reads as urgent at a glance, without
+  // pretending the task's actual workflow stage doesn't matter.
+  const tone = isOverdue ? TASK_STATUS_TONE.OVERDUE : TASK_STATUS_TONE[task.status];
 
   const isReviewerHere = viewerRole === ROLES.PROJECT_MANAGER && (!viewerId || task.project?.managerId === viewerId);
   const reviewCallout = inReview
@@ -41,22 +40,38 @@ export default function TaskRow({ task, basePath, showAssignee = true, viewerRol
     <Link
       to={`${basePath}/${task.id}`}
       className={clsx(
-        'group flex items-center gap-4 px-5 py-3.5 transition-all duration-150 hover:translate-x-0.5 hover:bg-paper',
-        isReviewerHere && 'bg-accent-50/30'
+        'group relative flex items-center gap-4 px-5 py-3.5 transition-all duration-150 hover:bg-paper',
+        isReviewerHere && 'bg-accent-50/30',
+        // Deadline inside the next 24 hours — same blink meetings get.
+        isCritical && 'urgent-blink'
       )}
     >
-      <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
-        {inReview && (
-          <span className={clsx('absolute inline-flex h-full w-full animate-ping rounded-full opacity-60', STATUS_DOT[task.status])} />
-        )}
-        <span className={clsx('relative inline-flex h-2 w-2 rounded-full', STATUS_DOT[task.status])} />
-      </span>
+      <span
+        className={clsx('h-8 w-1 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-y-110', tone.bar)}
+        aria-hidden="true"
+      />
+
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-ink transition-colors group-hover:text-route-700">
-          {task.title}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-ink transition-colors group-hover:text-route-700">
+            {task.title}
+          </p>
+          {isOverdue && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger-50 px-2 py-0.5 text-[11px] font-semibold text-danger-600">
+              <AlertTriangle className="h-3 w-3" strokeWidth={2.5} />
+              Overdue
+            </span>
+          )}
+          {isCritical && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+              <Flame className="h-3 w-3" strokeWidth={2.5} />
+              24h
+            </span>
+          )}
+        </div>
         <p className="truncate text-xs text-ink-muted">{task.project?.name}</p>
       </div>
+
       {reviewCallout && (
         <span
           className={clsx(
@@ -67,10 +82,28 @@ export default function TaskRow({ task, basePath, showAssignee = true, viewerRol
           <reviewCallout.icon className="h-3 w-3" /> {reviewCallout.label}
         </span>
       )}
-      {showAssignee && <Avatar name={task.assignee?.name} size="sm" />}
-      <Badge meta={PRIORITY_META[task.priority]} />
-      <Badge meta={TASK_STATUS_META[task.status]} />
-      <span className={clsx('w-24 shrink-0 text-right text-xs', isOverdue ? 'font-medium text-danger-600' : 'text-ink-muted')}>
+
+      {showAssignee && (
+        <span title={task.assignee?.name ? `Assigned to ${task.assignee.name}` : 'Unassigned'}>
+          <Avatar name={task.assignee?.name} size="sm" className="ring-2 ring-surface" />
+        </span>
+      )}
+
+      <span className="hidden shrink-0 md:inline-block">
+        <Badge meta={PRIORITY_META[task.priority]} />
+      </span>
+
+      <span className="hidden shrink-0 lg:inline-block">
+        <Badge meta={TASK_STATUS_META[task.status]} />
+      </span>
+
+      <span
+        className={clsx(
+          'flex w-24 shrink-0 items-center justify-end gap-1 text-xs',
+          isOverdue ? 'font-semibold text-danger-600' : isCritical ? 'font-semibold text-danger-500' : 'text-ink-muted'
+        )}
+      >
+        {isCritical ? <Flame className="h-3 w-3 shrink-0" /> : <CalendarDays className="h-3 w-3 shrink-0" />}
         {dueLabel}
       </span>
     </Link>

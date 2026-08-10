@@ -7,19 +7,25 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'authenticated' | 'guest'
+  // Drives the bottom-right session toast. Only set on an explicit login/
+  // logout action (not the silent refresh-on-page-load below), so it
+  // greets someone once per real sign-in rather than on every reload.
+  const [sessionEvent, setSessionEvent] = useState(null);
+  const clearSessionEvent = useCallback(() => setSessionEvent(null), []);
 
-  const clearSession = useCallback(() => {
+  const clearSession = useCallback((name) => {
     setAccessToken(null);
     disconnectSocket();
     setUser(null);
     setStatus('guest');
+    if (name) setSessionEvent({ type: 'logout', name, id: Date.now() });
   }, []);
 
   // On first load there's no access token in memory yet, but the httpOnly
   // refresh cookie may still be valid — try it once so a page refresh
   // doesn't bounce an already-logged-in user back to /login.
   useEffect(() => {
-    setUnauthorizedHandler(clearSession);
+    setUnauthorizedHandler(() => clearSession());
 
     (async () => {
       try {
@@ -49,6 +55,7 @@ export function AuthProvider({ children }) {
     setUser(data.data.user);
     setStatus('authenticated');
     connectSocket();
+    setSessionEvent({ type: 'login', name: data.data.user.name, id: Date.now() });
     return { user: data.data.user };
   }, []);
 
@@ -58,16 +65,18 @@ export function AuthProvider({ children }) {
     setUser(data.data.user);
     setStatus('authenticated');
     connectSocket();
+    setSessionEvent({ type: 'login', name: data.data.user.name, id: Date.now() });
     return data.data.user;
   }, []);
 
   const logout = useCallback(async () => {
+    const name = user?.name;
     try {
       await api.post('/auth/logout');
     } finally {
-      clearSession();
+      clearSession(name);
     }
-  }, [clearSession]);
+  }, [clearSession, user]);
 
   const refreshMe = useCallback(async () => {
     const { data } = await api.get('/auth/me');
@@ -76,7 +85,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, status, login, verifyTwoFactor, logout, refreshMe }}>
+    <AuthContext.Provider
+      value={{ user, status, login, verifyTwoFactor, logout, refreshMe, sessionEvent, clearSessionEvent }}
+    >
       {children}
     </AuthContext.Provider>
   );

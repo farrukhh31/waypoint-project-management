@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Diamond, Zap, X } from 'lucide-react';
+import { Diamond, Zap, X, Undo2, Locate } from 'lucide-react';
 import clsx from 'clsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import Avatar from '../ui/Avatar.jsx';
@@ -9,6 +9,7 @@ import {
   DAY,
   ZOOM_LEVELS,
   addDays,
+  buildTicks,
   computeWindow,
   diffDays,
   effectiveRange,
@@ -19,28 +20,17 @@ import {
 const ROW_HEIGHT = 40;
 const LABEL_WIDTH = 240;
 
-function buildTicks(rangeStart, rangeEnd, unit) {
-  const ticks = [];
-  let cursor = startOfDay(rangeStart);
-  const end = startOfDay(rangeEnd);
-  while (cursor <= end) {
-    ticks.push(new Date(cursor));
-    if (unit === 'day') cursor = addDays(cursor, 1);
-    else if (unit === 'week') cursor = addDays(cursor, 7);
-    else cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-  }
-  return ticks;
-}
-
 // Task-level Gantt: bars grouped by project, dependency connectors drawn
 // as elbowed SVG paths, milestones rendered as diamonds, bars draggable
 // (horizontal move = reschedule keeping duration, edge drag = resize).
-export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tasks', onReschedule }) {
+export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tasks', onReschedule, readOnly = false }) {
   const scrollRef = useRef(null);
   const [dragState, setDragState] = useState(null); // { taskId, mode, startX, originalStart, originalDue }
   const [localOverrides, setLocalOverrides] = useState({});
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
+  const [cascadeToast, setCascadeToast] = useState(null); // { count, changes: [{taskId, override, prev}] }
+  const cascadeTimeoutRef = useRef(null);
 
   const { pxPerDay, tickUnit } = ZOOM_LEVELS[zoom];
 
@@ -75,6 +65,20 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
 
   const now = new Date();
   const todayX = now >= rangeStart && now <= rangeEnd ? dateToX(now) : null;
+
+  // Open on "today" instead of the range start — a plan you have to
+  // scroll to find isn't one you actually check day to day.
+  useEffect(() => {
+    if (todayX == null || !scrollRef.current) return;
+    const el = scrollRef.current;
+    el.scrollLeft = Math.max(todayX - el.clientWidth / 2, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom]);
+
+  function scrollToToday() {
+    if (todayX == null || !scrollRef.current) return;
+    scrollRef.current.scrollTo({ left: Math.max(todayX - scrollRef.current.clientWidth / 2, 0), behavior: 'smooth' });
+  }
 
   // Reverse of task.dependsOn — who depends on ME. Needed to walk both
   // directions from a selected task, and to do the longest-path pass
@@ -175,6 +179,11 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
   const highlightSet = selectedTaskId ? selectedChain : showCriticalPath ? criticalPath?.ids : null;
 
   function handlePointerDown(e, task, mode) {
+    // Team members can see the Gantt but the backend doesn't let them
+    // reschedule (that's Admin/PM only) — bail before starting a drag
+    // session rather than letting them drag a bar that snaps back on
+    // the next refresh with no explanation.
+    if (readOnly) return;
     e.preventDefault();
     e.stopPropagation();
     const { start } = effectiveRange(task);
@@ -222,7 +231,69 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
         // No real drag happened — treat it as a click: select/deselect
         // this task's dependency chain instead of committing a reschedule.
         setSelectedTaskId((id) => (id === session.taskId ? null : session.taskId));
-      } else if (session.latestOverride && onReschedule) {
+        return;
+      }
+      if (!session.latestOverride) return;
+
+      const deltaDays = diffDays(new Date(session.latestOverride.startDate), session.originalStart);
+
+      // Moving (not resizing) a task that has downstream dependents:
+      // shift every transitive dependent by the same number of days so
+      // the schedule stays internally consistent instead of silently
+      // drifting out of sync with what it's blocking.
+      if (session.mode === 'move' && deltaDays !== 0) {
+        const dependentIds = new Set();
+        const queue = [...(dependentsMap.get(session.taskId) || [])];
+        while (queue.length) {
+          const id = queue.shift();
+          if (dependentIds.has(id)) continue;
+          dependentIds.add(id);
+          (dependentsMap.get(id) || []).forEach((c) => {
+            if (!dependentIds.has(c)) queue.push(c);
+          });
+        }
+
+        if (dependentIds.size > 0) {
+          const changes = [
+            {
+              taskId: session.taskId,
+              override: session.latestOverride,
+              prev: { startDate: session.originalStart.toISOString(), dueDate: session.originalDue.toISOString() },
+            },
+          ];
+          dependentIds.forEach((id) => {
+            const t = effective.find((x) => x.id === id);
+            if (!t) return;
+            const { start: depStart, end: depEnd } = effectiveRange(t);
+            changes.push({
+              taskId: id,
+              override: {
+                startDate: addDays(depStart, deltaDays).toISOString(),
+                dueDate: addDays(depEnd, deltaDays).toISOString(),
+              },
+              prev: { startDate: depStart.toISOString(), dueDate: depEnd.toISOString() },
+            });
+          });
+
+          setLocalOverrides((o) => {
+            const next = { ...o };
+            changes.forEach((c) => {
+              next[c.taskId] = c.override;
+            });
+            return next;
+          });
+          changes.forEach((c) => {
+            onReschedule?.(c.taskId, c.override).catch(() => {});
+          });
+
+          clearTimeout(cascadeTimeoutRef.current);
+          setCascadeToast({ count: changes.length - 1, changes });
+          cascadeTimeoutRef.current = setTimeout(() => setCascadeToast(null), 7000);
+          return;
+        }
+      }
+
+      if (onReschedule) {
         onReschedule(session.taskId, session.latestOverride).catch(() => {
           setLocalOverrides((o) => {
             const next = { ...o };
@@ -237,6 +308,22 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
     window.addEventListener('pointerup', handleUp);
   }
 
+  function undoCascade() {
+    if (!cascadeToast) return;
+    clearTimeout(cascadeTimeoutRef.current);
+    setLocalOverrides((o) => {
+      const next = { ...o };
+      cascadeToast.changes.forEach((c) => {
+        next[c.taskId] = c.prev;
+      });
+      return next;
+    });
+    cascadeToast.changes.forEach((c) => {
+      onReschedule?.(c.taskId, c.prev).catch(() => {});
+    });
+    setCascadeToast(null);
+  }
+
   if (tasks.length === 0) {
     return (
       <EmptyState
@@ -247,7 +334,7 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface">
+    <div className="relative overflow-hidden rounded-lg border border-line bg-surface">
       {/* Chain inspector / critical path toolbar */}
       <div className="flex items-center justify-between gap-3 border-b border-line bg-paper/50 px-3 py-2">
         <div className="flex min-h-[20px] items-center gap-2 text-xs">
@@ -292,7 +379,34 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
             Critical path
           </button>
         )}
+        {todayX != null && (
+          <button
+            type="button"
+            onClick={scrollToToday}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <Locate className="h-3 w-3" />
+            Today
+          </button>
+        )}
       </div>
+
+      {/* Cascading-reschedule confirmation */}
+      {cascadeToast && (
+        <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full border border-ink/10 bg-ink px-4 py-2 text-xs text-white shadow-pop">
+          <span>
+            Rescheduled — {cascadeToast.count} downstream task{cascadeToast.count > 1 ? 's' : ''} shifted too.
+          </span>
+          <button
+            type="button"
+            onClick={undoCascade}
+            className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-medium transition-colors hover:bg-white/25"
+          >
+            <Undo2 className="h-3 w-3" />
+            Undo
+          </button>
+        </div>
+      )}
 
       <div className="flex">
         {/* Fixed label column */}
@@ -427,10 +541,10 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
               >
                 <defs>
                   <marker id="gantt-arrow" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto">
-                    <path d="M0,0 L5,2.5 L0,5 Z" fill="#7FADD1" />
+                    <path d="M0,0 L5,2.5 L0,5 Z" fill="rgb(var(--color-ink-muted) / 1)" />
                   </marker>
                   <marker id="gantt-arrow-active" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto">
-                    <path d="M0,0 L5,2.5 L0,5 Z" fill="#2F5D8A" />
+                    <path d="M0,0 L5,2.5 L0,5 Z" fill="#5B4FE0" />
                   </marker>
                 </defs>
                 {rows.map((row) => {
@@ -466,7 +580,7 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
                         key={`${dep.id}-${row.task.id}`}
                         d={d}
                         fill="none"
-                        stroke={isActive ? '#2F5D8A' : '#7FADD1'}
+                        stroke={isActive ? '#5B4FE0' : 'rgb(var(--color-ink-muted) / 1)'}
                         strokeWidth={isActive ? 2.5 : 1.5}
                         strokeLinecap="round"
                         opacity={isDimmed ? 0.15 : 1}
@@ -536,7 +650,8 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
                   <div
                     key={task.id}
                     className={clsx(
-                      'group absolute z-10 flex cursor-grab items-center gap-1.5 overflow-hidden rounded-md border border-white/[0.06] bg-gradient-to-b from-ink-soft to-ink pl-0 pr-2 shadow-sm ring-1 ring-black/5 transition-all duration-150 active:cursor-grabbing',
+                      'group absolute z-10 flex items-center gap-1.5 overflow-hidden rounded-md border border-white/[0.06] bg-gradient-to-b from-ink-soft to-ink pl-0 pr-2 shadow-sm ring-1 ring-black/5 transition-all duration-150',
+                      readOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
                       isDimmed
                         ? ''
                         : isDragging
@@ -593,12 +708,14 @@ export default function TaskGanttView({ tasks = [], zoom, basePath = '/admin/tas
                       />
                     )}
                     {/* Resize handle */}
-                    <div
-                      className="absolute right-0 top-0 h-full w-2 cursor-ew-resize opacity-0 group-hover:opacity-100"
-                      onPointerDown={(e) => handlePointerDown(e, task, 'resize-end')}
-                    >
-                      <div className="mx-auto mt-1 h-[calc(100%-8px)] w-0.5 rounded-full bg-white/60" />
-                    </div>
+                    {!readOnly && (
+                      <div
+                        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize opacity-0 group-hover:opacity-100"
+                        onPointerDown={(e) => handlePointerDown(e, task, 'resize-end')}
+                      >
+                        <div className="mx-auto mt-1 h-[calc(100%-8px)] w-0.5 rounded-full bg-white/60" />
+                      </div>
+                    )}
                   </div>
                 );
               })}

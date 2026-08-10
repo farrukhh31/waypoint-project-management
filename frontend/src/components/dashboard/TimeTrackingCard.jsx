@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Pause, Play, Square, Timer } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Card, { CardHeader, CardBody } from '../ui/Card.jsx';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import { useTimeEntry } from '../../hooks/useTimeEntry';
 import { formatClock } from '../../utils/formatDate';
 
-export default function TimeTrackingCard() {
+export default function TimeTrackingCard({ basePath }) {
   const { entry, loading, elapsedSeconds, start, pause, resume, stop } = useTimeEntry();
   const [label, setLabel] = useState('');
   const [starting, setStarting] = useState(false);
@@ -27,7 +28,13 @@ export default function TimeTrackingCard() {
     <Card className="overflow-hidden">
       <CardHeader>
         <h3 className="font-display text-base font-semibold text-ink">Time tracking</h3>
-        <Timer className="h-4 w-4 text-ink-muted" />
+        {basePath ? (
+          <Link to={`${basePath}/time-tracking`} className="text-xs font-medium text-route-600 hover:underline">
+            View all
+          </Link>
+        ) : (
+          <Timer className="h-4 w-4 text-ink-muted" />
+        )}
       </CardHeader>
       <CardBody>
         {loading ? (

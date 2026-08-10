@@ -6,6 +6,7 @@ const { sequelize } = require('./models');
 const initSocket = require('./services/socketService');
 const { attachSocketServer } = require('./services/notificationService');
 const { startDeadlineScheduler } = require('./services/deadlineScheduler');
+const { startMeetingReminderScheduler } = require('./services/meetingReminderScheduler');
 
 const PORT = process.env.PORT || 5000;
 
@@ -30,6 +31,7 @@ async function start() {
     attachSocketServer(io);
 
     startDeadlineScheduler();
+    startMeetingReminderScheduler();
 
     httpServer.listen(PORT, () => {
       console.log(`PM Platform API listening on port ${PORT}`);

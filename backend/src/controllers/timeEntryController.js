@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { TimeEntry, Project, Task } = require('../models');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
@@ -133,4 +134,69 @@ const stopEntry = catchAsync(async (req, res) => {
   res.json({ success: true, message: 'Timer stopped.', data: { entry: withElapsed(full) } });
 });
 
-module.exports = { getActive, listEntries, startEntry, pauseEntry, resumeEntry, stopEntry };
+// PATCH /api/time-entries/:id — edit a stopped entry's label/project/task
+// (e.g. fixing what you forgot to label correctly while the timer was running).
+const updateEntry = catchAsync(async (req, res) => {
+  const entry = await TimeEntry.findByPk(req.params.id);
+  if (!entry) throw ApiError.notFound('Time entry not found.');
+  if (entry.userId !== req.user.id) throw ApiError.forbidden('This time entry belongs to someone else.');
+
+  await entry.update(req.body);
+
+  const full = await TimeEntry.findByPk(entry.id, { include: timeEntryIncludes });
+  res.json({ success: true, message: 'Time entry updated.', data: { entry: withElapsed(full) } });
+});
+
+// DELETE /api/time-entries/:id — remove a history row entirely.
+const deleteEntry = catchAsync(async (req, res) => {
+  const entry = await TimeEntry.findByPk(req.params.id);
+  if (!entry) throw ApiError.notFound('Time entry not found.');
+  if (entry.userId !== req.user.id) throw ApiError.forbidden('This time entry belongs to someone else.');
+
+  await entry.destroy();
+  res.json({ success: true, message: 'Time entry removed.' });
+});
+
+// GET /api/time-entries/stats — totals for the "today" / "this week" /
+// "this month" stat cards on the Time Tracking page, plus a per-project
+// breakdown for the current week so the page can show where time went.
+const getStats = catchAsync(async (req, res) => {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfDay);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const entries = await TimeEntry.findAll({
+    where: { userId: req.user.id, status: 'STOPPED', stoppedAt: { [Op.gte]: startOfMonth } },
+    include: [{ model: Project, as: 'project', attributes: ['id', 'name'] }],
+  });
+
+  function sumSince(since) {
+    return entries
+      .filter((e) => new Date(e.stoppedAt) >= since)
+      .reduce((sum, e) => sum + e.accumulatedSeconds, 0);
+  }
+
+  const byProject = {};
+  for (const e of entries) {
+    if (new Date(e.stoppedAt) < startOfWeek) continue;
+    const key = e.project ? e.project.id : 'unassigned';
+    const label = e.project ? e.project.name : 'No project';
+    byProject[key] = byProject[key] || { projectId: e.project?.id ?? null, name: label, seconds: 0 };
+    byProject[key].seconds += e.accumulatedSeconds;
+  }
+
+  res.json({
+    success: true,
+    data: {
+      todaySeconds: sumSince(startOfDay),
+      weekSeconds: sumSince(startOfWeek),
+      monthSeconds: sumSince(startOfMonth),
+      entriesThisWeek: entries.filter((e) => new Date(e.stoppedAt) >= startOfWeek).length,
+      byProject: Object.values(byProject).sort((a, b) => b.seconds - a.seconds),
+    },
+  });
+});
+
+module.exports = { getActive, listEntries, startEntry, pauseEntry, resumeEntry, stopEntry, updateEntry, deleteEntry, getStats };

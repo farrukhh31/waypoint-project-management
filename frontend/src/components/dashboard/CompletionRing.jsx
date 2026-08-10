@@ -19,7 +19,7 @@ export default function CompletionRing({ label = 'Task completion', completed = 
   const card = (
     <Card
       className={clsx(
-        'group relative flex items-center gap-4 overflow-hidden bg-gradient-to-br from-accent-50 via-surface to-surface p-5 transition-shadow duration-200 hover:shadow-pop',
+        'group relative flex items-center gap-4 overflow-hidden bg-gradient-to-br from-accent-400/[0.09] via-surface to-surface p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop',
         STAT_CARD_HEIGHT
       )}
     >

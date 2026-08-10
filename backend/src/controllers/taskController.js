@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const { Task, Project, User, ProjectMember, TaskDependency, TaskDiscussion } = require('../models');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
@@ -45,13 +46,23 @@ async function assertTaskAccess(task, user) {
 }
 
 // GET /api/tasks?projectId=&status=&priority=&assigneeId=&search=&sortBy=&order=&page=&limit=
+// `status=OVERDUE` is a virtual filter, not a real column value — there's no
+// OVERDUE row in the Task status enum (that would collide with the actual
+// workflow FSM: TODO/IN_PROGRESS/REVIEW/COMPLETED). It maps to "open task
+// past its due date", the same definition the admin dashboard's overdue
+// count already uses.
 const listTasks = catchAsync(async (req, res) => {
   const { projectId, status, priority, assigneeId, search, sortBy, order, page, limit } = req.query;
   const { user } = req;
 
   const where = {};
   if (projectId) where.projectId = projectId;
-  if (status) where.status = status;
+  if (status === 'OVERDUE') {
+    where.dueDate = { [Op.lt]: new Date() };
+    where.status = { [Op.ne]: 'COMPLETED' };
+  } else if (status) {
+    where.status = status;
+  }
   if (priority) where.priority = priority;
   if (assigneeId) where.assigneeId = assigneeId;
   if (search) where.title = containsInsensitive(search);
@@ -75,9 +86,27 @@ const listTasks = catchAsync(async (req, res) => {
     offset,
   });
 
+  // Live filter-pill counts for the current role/search/priority scope,
+  // ignoring whichever status the person has selected — otherwise picking
+  // a status would collapse every other pill's count to 0. Mirrors the same
+  // pattern the Projects list already uses for its status pills.
+  const { status: _status, dueDate: _dueDate, ...whereForCounts } = where;
+  const [statusRows, overdueCount] = await Promise.all([
+    Task.findAll({
+      where: whereForCounts,
+      attributes: ['status', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      group: ['status'],
+      raw: true,
+    }),
+    Task.count({
+      where: { ...whereForCounts, status: { [Op.ne]: 'COMPLETED' }, dueDate: { [Op.lt]: new Date() } },
+    }),
+  ]);
+  const statusCounts = statusRows.reduce((acc, r) => ({ ...acc, [r.status]: parseInt(r.count, 10) }), {});
+
   res.json({
     success: true,
-    data: { tasks: rows, pagination: paginationMeta(pageNum, limitNum, count) },
+    data: { tasks: rows, pagination: paginationMeta(pageNum, limitNum, count), statusCounts, overdueCount },
   });
 });
 

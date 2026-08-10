@@ -43,7 +43,7 @@ router.get(
   validate({ params: idParamSchema }),
   userController.getUserReport
 );
-router.get('/:id', requireRole('ADMIN'), validate({ params: idParamSchema }), userController.getUser);
+router.get('/:id', requireRole('ADMIN', 'PROJECT_MANAGER'), validate({ params: idParamSchema }), userController.getUser);
 router.patch(
   '/:id',
   requireRole('ADMIN'),

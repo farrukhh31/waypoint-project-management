@@ -58,7 +58,7 @@ export default function ProjectTimelineView({ projects = [], basePath = '/admin/
       )}
 
       <div className={`flex flex-1 flex-col gap-3 ${compact ? 'justify-between' : ''}`}>
-        {list.map((project) => {
+        {list.map((project, i) => {
           const start = new Date(project.startDate);
           const end = new Date(project.endDate);
           const left = (diffDays(start, rangeStart) / totalSpan) * 100;
@@ -66,7 +66,12 @@ export default function ProjectTimelineView({ projects = [], basePath = '/admin/
           const statusMeta = PROJECT_STATUS_META[project.status];
 
           return (
-            <TiltCard key={project.id} maxTilt={3} className={`rounded-lg ${compact ? 'flex-1' : ''}`}>
+            <TiltCard
+              key={project.id}
+              maxTilt={3}
+              className={`rounded-lg ${compact ? 'flex-1' : ''} ${compact ? 'animate-[fade-in-up_0.5s_ease-out_both]' : ''}`}
+              style={compact ? { animationDelay: `${i * 70}ms` } : undefined}
+            >
               <Link
                 to={`${basePath}/${project.id}`}
                 className="group flex h-full flex-col justify-center rounded-lg border border-line bg-surface px-4 py-3 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop"

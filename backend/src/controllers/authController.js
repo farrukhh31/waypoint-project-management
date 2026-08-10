@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
 const { User, RefreshToken } = require('../models');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
@@ -186,8 +187,24 @@ const logout = catchAsync(async (req, res) => {
   res.json({ success: true, message: 'Logged out successfully.' });
 });
 
+// POST /api/auth/logout-all — Settings > Sessions > "Log out of all other
+// devices". Revokes every refresh token on the account except the one tied
+// to the request making this call, so the current session survives while
+// every other browser/device is forced back to the login screen next time
+// it tries to silently refresh.
+const logoutAllOtherSessions = catchAsync(async (req, res) => {
+  const currentToken = req.cookies?.refreshToken;
+  await RefreshToken.destroy({
+    where: {
+      userId: req.user.id,
+      ...(currentToken ? { token: { [Op.ne]: currentToken } } : {}),
+    },
+  });
+  res.json({ success: true, message: 'Signed out of all other devices.' });
+});
+
 const me = catchAsync(async (req, res) => {
   res.json({ success: true, data: { user: req.user.toSafeJSON() } });
 });
 
-module.exports = { register, login, verifyTwoFactor, refresh, logout, me, bootstrapStatus };
+module.exports = { register, login, verifyTwoFactor, refresh, logout, logoutAllOtherSessions, me, bootstrapStatus };

@@ -21,7 +21,10 @@ export default function AuthLayout() {
   };
 
   return (
-    <div ref={ref} className="relative flex min-h-screen overflow-hidden bg-gradient-to-br from-route-50 via-paper to-paper">
+    <div
+      ref={ref}
+      className="auth-force-light relative flex min-h-screen overflow-hidden bg-gradient-to-br from-route-50 via-paper to-paper"
+    >
       {/* Ambient glow, page-wide */}
       <div
         className="pointer-events-none absolute -right-32 -top-40 h-[28rem] w-[28rem] rounded-full bg-route-300/20 blur-3xl"

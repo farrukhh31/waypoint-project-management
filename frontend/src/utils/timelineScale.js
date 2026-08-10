@@ -55,3 +55,19 @@ export function formatShort(date) {
 export function formatMonthYear(date) {
   return new Date(date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
+
+// Tick marks (day/week/month, per zoom level) spanning [rangeStart, rangeEnd].
+// Shared by every view with a horizontal axis (Gantt, Workload) so their
+// columns line up and "today" is computed the same way everywhere.
+export function buildTicks(rangeStart, rangeEnd, unit) {
+  const ticks = [];
+  let cursor = startOfDay(rangeStart);
+  const end = startOfDay(rangeEnd);
+  while (cursor <= end) {
+    ticks.push(new Date(cursor));
+    if (unit === 'day') cursor = addDays(cursor, 1);
+    else if (unit === 'week') cursor = addDays(cursor, 7);
+    else cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+  return ticks;
+}

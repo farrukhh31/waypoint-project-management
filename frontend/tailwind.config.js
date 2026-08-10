@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -8,14 +9,18 @@ export default {
         // v2: a fuller, more saturated palette — a tinted background plus
         // five vivid hues (route, accent, success, danger, sky, teal) —
         // in place of the original mostly-white/blue treatment.
+        // ink/paper/surface/line resolve through CSS variables (defined in
+        // index.css) so the `dark` class can flip the whole app's
+        // structural colors while every existing opacity-modified class
+        // (bg-paper/40, text-ink-muted/50, ...) keeps working unchanged.
         ink: {
-          DEFAULT: '#181B34', // primary text, dark surfaces
-          soft: '#454866', // secondary text
-          muted: '#75778F', // tertiary / placeholder text
+          DEFAULT: 'rgb(var(--color-ink) / <alpha-value>)', // primary text
+          soft: 'rgb(var(--color-ink-soft) / <alpha-value>)', // secondary text
+          muted: 'rgb(var(--color-ink-muted) / <alpha-value>)', // tertiary / placeholder text
         },
-        paper: '#EFF1FC', // app background — soft violet-blue tint, not white
-        surface: '#FFFFFF', // cards, panels
-        line: '#E1DFF5', // hairline borders/dividers
+        paper: 'rgb(var(--color-paper) / <alpha-value>)', // app background
+        surface: 'rgb(var(--color-surface) / <alpha-value>)', // cards, panels
+        line: 'rgb(var(--color-line) / <alpha-value>)', // hairline borders/dividers
         route: {
           50: '#EEF0FE',
           100: '#D9DDFC',

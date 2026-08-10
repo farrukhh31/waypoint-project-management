@@ -10,6 +10,39 @@ export function formatDueDate(isoString) {
   return `Due in ${diffDays}d`;
 }
 
+// Deadline urgency for highlighting, one level up from just "overdue":
+// 'overdue' (past due, still open), 'soon' (due today/tomorrow, or within
+// DUE_SOON_DAYS — the window a task is genuinely "touching" its deadline),
+// or 'normal' otherwise. Completed tasks are never flagged, whatever their
+// due date — highlighting is about what still needs attention.
+const DUE_SOON_DAYS = 2;
+
+export function getDeadlineUrgency(isoString, status) {
+  if (!isoString || status === 'COMPLETED') return 'normal';
+  const date = new Date(isoString);
+  const today = new Date();
+  const diffDays = Math.round((date.setHours(0, 0, 0, 0) - today.setHours(0, 0, 0, 0)) / 86400000);
+
+  if (diffDays < 0) return 'overdue';
+  if (diffDays <= DUE_SOON_DAYS) return 'soon';
+  return 'normal';
+}
+
+// Real-time (hour-precision) check for a deadline landing within the next
+// 24 hours — a tighter, exact-hours window than `getDeadlineUrgency`'s
+// day-granular 'soon' bucket. Drives the same "about to happen" blink
+// treatment meetings already get (see `.urgent-blink` in index.css) on
+// task and project deadline cards, plus the dashboard's urgent-deadlines
+// counter. Only counts deadlines still in the future and still open —
+// something already overdue or done isn't "about to" happen anymore.
+export function isDeadlineCritical(isoString, status) {
+  if (!isoString || status === 'COMPLETED' || status === 'CANCELLED') return false;
+  const dueTime = new Date(isoString).getTime();
+  if (!Number.isFinite(dueTime)) return false;
+  const diffMs = dueTime - Date.now();
+  return diffMs > 0 && diffMs <= 24 * 60 * 60 * 1000;
+}
+
 export function formatDate(isoString) {
   if (!isoString) return '—';
   return new Date(isoString).toLocaleDateString(undefined, {
@@ -27,6 +60,17 @@ export function formatClock(totalSeconds = 0) {
   const seconds = s % 60;
   const pad = (n) => String(n).padStart(2, '0');
   return hours > 0 ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
+}
+
+// "5h 30m" style duration for stat cards and history rows — friendlier
+// than a clock face when the number isn't actively ticking.
+export function formatDuration(totalSeconds = 0) {
+  const s = Math.max(Math.floor(totalSeconds), 0);
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  if (hours === 0 && minutes === 0) return '<1m';
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
 }
 
 // "2h ago" / "3d ago" style relative timestamp for activity feeds

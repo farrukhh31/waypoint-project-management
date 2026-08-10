@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   PauseCircle,
   Layers,
+  AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../../lib/api';
@@ -101,6 +102,7 @@ export default function Projects({ basePath }) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(() => searchParams.get('status') || '');
   const [priority, setPriority] = useState('');
+  const [overdue, setOverdue] = useState(() => searchParams.get('overdue') === 'true');
   const [sortBy, setSortBy] = useState('createdAt');
   const [order, setOrder] = useState('DESC');
   const [view, setView] = useState('grid');
@@ -124,11 +126,12 @@ export default function Projects({ basePath }) {
   const { items, pagination, meta, loading, refetch } = useList(
     '/projects',
     'projects',
-    { search, status, priority, sortBy, order, page },
-    [search, status, priority, sortBy, order, page]
+    { search, status, priority, overdue: overdue ? 'true' : '', sortBy, order, page },
+    [search, status, priority, overdue, sortBy, order, page]
   );
 
   const statusCounts = meta?.statusCounts || {};
+  const overdueCount = meta?.overdueCount || 0;
   const totalCount = useMemo(
     () => PROJECT_STATUSES.reduce((sum, s) => sum + (statusCounts[s] || 0), 0),
     [statusCounts]
@@ -136,6 +139,11 @@ export default function Projects({ basePath }) {
 
   function updateStatus(value) {
     setStatus((current) => (current === value ? '' : value));
+    setPage(1);
+  }
+
+  function toggleOverdue() {
+    setOverdue((current) => !current);
     setPage(1);
   }
 
@@ -197,11 +205,21 @@ export default function Projects({ basePath }) {
 
       {/* At-a-glance overview — same StatCard used on the dashboards, so the
           Projects section gets a premium summary strip for free. */}
-      <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Total projects" value={totalCount} icon={Layers} accent="route" tilt />
         <StatCard label="Active" value={statusCounts.ACTIVE || 0} icon={Rocket} accent="accent" tilt />
         <StatCard label="Completed" value={statusCounts.COMPLETED || 0} icon={CheckCircle2} accent="success" tilt />
         <StatCard label="On hold" value={statusCounts.ON_HOLD || 0} icon={PauseCircle} accent="danger" tilt />
+        {isAdmin && (
+          <StatCard
+            label="Overdue tasks"
+            value={overdueCount}
+            icon={AlertTriangle}
+            accent="danger"
+            tilt
+            hint="Projects with open tasks past due"
+          />
+        )}
       </div>
 
       {/* Status filter pills, doubling as a live breakdown */}
@@ -217,6 +235,32 @@ export default function Projects({ basePath }) {
             onClick={() => updateStatus(s)}
           />
         ))}
+        {isAdmin && (
+          <>
+            <span className="mx-1 h-4 w-px bg-line" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={toggleOverdue}
+              className={clsx(
+                'flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all duration-200',
+                overdue
+                  ? 'border-danger-400 bg-danger-400 text-white shadow-pop'
+                  : 'border-line bg-surface text-ink-soft hover:-translate-y-0.5 hover:border-danger-200 hover:bg-danger-50 hover:text-danger-600 hover:shadow-card'
+              )}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Overdue
+              <span
+                className={clsx(
+                  'rounded-full px-1.5 py-px text-xs tabular-nums',
+                  overdue ? 'bg-white/20' : 'bg-ink-muted/10 text-ink-muted'
+                )}
+              >
+                {overdueCount}
+              </span>
+            </button>
+          </>
+        )}
       </div>
 
       <Toolbar>
@@ -245,7 +289,7 @@ export default function Projects({ basePath }) {
             type="button"
             onClick={() => setView('grid')}
             className={clsx(
-              'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              'flex h-8 w-8 items-center justify-center rounded-md transition-all duration-150 active:scale-90',
               view === 'grid' ? 'bg-route-500 text-white shadow-card' : 'text-ink-muted hover:text-ink'
             )}
             aria-label="Grid view"
@@ -257,7 +301,7 @@ export default function Projects({ basePath }) {
             type="button"
             onClick={() => setView('list')}
             className={clsx(
-              'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              'flex h-8 w-8 items-center justify-center rounded-md transition-all duration-150 active:scale-90',
               view === 'list' ? 'bg-route-500 text-white shadow-card' : 'text-ink-muted hover:text-ink'
             )}
             aria-label="List view"
@@ -299,7 +343,9 @@ export default function Projects({ basePath }) {
           }
         />
       ) : view === 'grid' ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        // Keyed on `view` so switching grid <-> list re-triggers the
+        // stagger below instead of only playing once on first load.
+        <div key="grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {isAdmin && (
             <AddCardTile
               label="New project"
@@ -321,11 +367,15 @@ export default function Projects({ basePath }) {
           ))}
         </div>
       ) : (
-        <Card className="divide-y divide-line overflow-hidden p-0">
-          {items.map((project) => (
+        <Card key="list" className="divide-y divide-line overflow-hidden p-0">
+          {items.map((project, i) => (
             <div
               key={project.id}
-              className={clsx('relative', deletingId === project.id && 'pointer-events-none opacity-50')}
+              className={clsx(
+                'relative animate-[fade-in-up_0.35s_ease-out_both]',
+                deletingId === project.id && 'pointer-events-none opacity-50'
+              )}
+              style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
             >
               <ProjectListRow
                 project={project}

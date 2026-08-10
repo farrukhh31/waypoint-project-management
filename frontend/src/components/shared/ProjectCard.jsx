@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalendarDays, Crown, Flag, Pencil, Trash2, ListChecks } from 'lucide-react';
+import { CalendarDays, Crown, Flag, Pencil, Trash2, ListChecks, AlertTriangle, Flame } from 'lucide-react';
 import clsx from 'clsx';
 import Card from '../ui/Card.jsx';
 import Badge from '../ui/Badge.jsx';
@@ -7,7 +7,7 @@ import Avatar from '../ui/Avatar.jsx';
 import AvatarStack from '../ui/AvatarStack.jsx';
 import TiltCard from '../ui/TiltCard.jsx';
 import { PROJECT_STATUS_META, PRIORITY_META, PROJECT_STATUS_TONE } from '../../config/statuses';
-import { formatDate, formatDueDate, timeElapsedPct } from '../../utils/formatDate';
+import { formatDate, formatDueDate, timeElapsedPct, isDeadlineCritical } from '../../utils/formatDate';
 
 // Per-status tone used for the card's accent bar, the timeline pin, and the
 // quiet hover-wash — same "premium gradient wash" language StatCard uses on
@@ -34,6 +34,7 @@ export default function ProjectCard({ project, basePath, canManage = false, onEd
   const dueLabel = formatDueDate(project.endDate);
   const isOverdue = dueLabel.includes('overdue') && project.status !== 'COMPLETED' && project.status !== 'CANCELLED';
   const isDueSoon = (dueLabel === 'Due today' || dueLabel === 'Due tomorrow') && !isOverdue;
+  const isCritical = isDeadlineCritical(project.endDate, project.status);
 
   function stop(e, fn) {
     e.preventDefault();
@@ -48,7 +49,9 @@ export default function ProjectCard({ project, basePath, canManage = false, onEd
           className={clsx(
             'card-sheen relative flex h-full flex-col overflow-hidden p-0 transition-all duration-300',
             'hover:-translate-y-1 hover:border-route-200 hover:shadow-pop',
-            'focus-visible:-translate-y-1 focus-visible:border-route-200 focus-visible:shadow-pop'
+            'focus-visible:-translate-y-1 focus-visible:border-route-200 focus-visible:shadow-pop',
+            // Deadline inside the next 24 hours — same blink meetings get.
+            isCritical && 'urgent-blink'
           )}
         >
           {/* Quiet gradient wash that blooms in on hover, tinted per status */}
@@ -102,6 +105,18 @@ export default function ProjectCard({ project, basePath, canManage = false, onEd
                 <Flag className={clsx('h-3 w-3', PRIORITY_FLAG[project.priority])} strokeWidth={2.5} />
                 {PRIORITY_META[project.priority]?.label}
               </span>
+              {progress.overdue > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-danger-50 px-2.5 py-0.5 text-xs font-medium text-danger-600">
+                  <AlertTriangle className="h-3 w-3" strokeWidth={2.5} />
+                  {progress.overdue} overdue
+                </span>
+              )}
+              {isCritical && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-danger-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                  <Flame className="h-3 w-3" strokeWidth={2.5} />
+                  Due within 24h
+                </span>
+              )}
             </div>
 
             {project.description && (

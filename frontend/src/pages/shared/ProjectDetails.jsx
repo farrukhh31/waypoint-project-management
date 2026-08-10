@@ -31,6 +31,7 @@ import TaskRow from '../../components/shared/TaskRow.jsx';
 import StatChip from '../../components/shared/StatChip.jsx';
 import AddCardTile from '../../components/shared/AddCardTile.jsx';
 import TeamChartModal from '../../components/shared/TeamChartModal.jsx';
+import UserProfileModal from '../../components/shared/UserProfileModal.jsx';
 import ActivityTimeline from '../../components/shared/ActivityTimeline.jsx';
 import ReviewPanel from '../../components/shared/ReviewPanel.jsx';
 import SubmissionModal from '../../components/shared/SubmissionModal.jsx';
@@ -62,6 +63,7 @@ export default function ProjectDetails({ tasksBasePath }) {
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [teamChartOpen, setTeamChartOpen] = useState(false);
+  const [viewMemberId, setViewMemberId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -520,12 +522,24 @@ export default function ProjectDetails({ tasksBasePath }) {
             <CardHeader>
               <h3 className="font-display text-sm font-semibold text-ink">Manager</h3>
             </CardHeader>
-            <CardBody className="flex items-center gap-2.5">
-              <Avatar name={project.manager?.name} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-ink">{project.manager?.name}</p>
-                <p className="truncate text-xs text-ink-muted">{project.manager?.email}</p>
-              </div>
+            <CardBody>
+              {project.manager ? (
+                <button
+                  type="button"
+                  onClick={() => setViewMemberId(project.manager.id)}
+                  className="group/row -mx-2 flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-paper"
+                >
+                  <Avatar name={project.manager.name} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink group-hover/row:text-route-600">
+                      {project.manager.name}
+                    </p>
+                    <p className="truncate text-xs text-ink-muted">{project.manager.email}</p>
+                  </div>
+                </button>
+              ) : (
+                <p className="px-2 py-1 text-sm text-ink-muted">No manager assigned.</p>
+              )}
             </CardBody>
           </Card>
 
@@ -554,10 +568,14 @@ export default function ProjectDetails({ tasksBasePath }) {
                     key={member.id}
                     className="group/row -mx-2 flex items-center justify-between gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-paper"
                   >
-                    <div className="flex min-w-0 items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setViewMemberId(member.id)}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                    >
                       <Avatar name={member.name} size="sm" />
-                      <p className="truncate text-sm text-ink-soft">{member.name}</p>
-                    </div>
+                      <p className="truncate text-sm text-ink-soft group-hover/row:text-route-600">{member.name}</p>
+                    </button>
                     {canManage && (
                       <button
                         type="button"
@@ -622,7 +640,10 @@ export default function ProjectDetails({ tasksBasePath }) {
         canManage={canManage}
         onRemoveMember={handleRemoveMember}
         removingId={removingId}
+        onSelectPerson={(personId) => setViewMemberId(personId)}
       />
+
+      <UserProfileModal userId={viewMemberId} open={Boolean(viewMemberId)} onClose={() => setViewMemberId(null)} />
 
       <BlockedCompletionModal
         open={Boolean(blockedTasks)}

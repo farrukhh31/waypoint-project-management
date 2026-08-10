@@ -34,7 +34,7 @@ export default function ActivityPillChart({ days = [] }) {
             <div
               className={clsx(
                 'relative flex h-32 w-full max-w-[34px] flex-col-reverse items-center gap-1 rounded-full border py-2 shadow-[inset_0_1px_3px_rgba(18,23,43,0.06)] transition-shadow duration-200 hover:shadow-pop',
-                isToday ? 'border-route-300 bg-route-50/70' : 'border-line bg-paper/70'
+                isToday ? 'border-route-300 bg-route-400/10' : 'border-line bg-paper/70'
               )}
               title={`${day.label} — ${day.total} activit${day.total === 1 ? 'y' : 'ies'}`}
             >

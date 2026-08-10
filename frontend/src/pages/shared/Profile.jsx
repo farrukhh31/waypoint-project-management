@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Camera,
   Check,
@@ -179,7 +179,7 @@ export default function Profile() {
 
   const [tab, setTab] = useState('overview');
 
-  const [form, setForm] = useState({
+  const initialForm = {
     name: user.name || '',
     email: user.email || '',
     currentPassword: '',
@@ -188,8 +188,17 @@ export default function Profile() {
     location: user.location || '',
     linkedinUrl: user.linkedinUrl || '',
     bio: user.bio || '',
-  });
+  };
+  const [form, setForm] = useState(initialForm);
+  // Snapshot of the last-saved (or initially-loaded) form values. Compared
+  // against `form` below to gate the Save button — kept in a ref rather
+  // than state since updating it should never itself trigger a re-render.
+  const savedFormRef = useRef(initialForm);
   const emailChanged = form.email.trim().toLowerCase() !== user.email.toLowerCase();
+  const hasUnsavedChanges = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(savedFormRef.current),
+    [form]
+  );
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState(null);
 
@@ -218,7 +227,11 @@ export default function Profile() {
       }
       await api.patch('/users/me/profile', payload);
       await refreshMe();
-      setForm((f) => ({ ...f, currentPassword: '' }));
+      setForm((f) => {
+        const next = { ...f, currentPassword: '' };
+        savedFormRef.current = next;
+        return next;
+      });
       setProfileMessage({ type: 'success', text: 'Profile updated.' });
     } catch (err) {
       setProfileMessage({ type: 'error', text: err.response?.data?.message || 'Could not update profile.' });
@@ -476,9 +489,14 @@ export default function Profile() {
                 />
               </Field>
               <InlineMessage message={profileMessage} />
-              <Button type="submit" className="w-fit" loading={savingProfile}>
-                Save changes
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button type="submit" className="w-fit" loading={savingProfile} disabled={!hasUnsavedChanges}>
+                  Save changes
+                </Button>
+                {!hasUnsavedChanges && !savingProfile && (
+                  <span className="text-xs text-ink-muted">No changes to save yet</span>
+                )}
+              </div>
             </form>
           </CardBody>
         </Card>

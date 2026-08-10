@@ -60,14 +60,15 @@ export default function GlobalSearch({ role }) {
       </kbd>
 
       {open && matches.length > 0 && (
-        <div className="absolute left-0 top-12 z-20 w-full overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-pop">
-          {matches.map((item) => (
+        <div className="absolute left-0 top-12 z-20 w-full origin-top overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-pop animate-modal-pop">
+          {matches.map((item, i) => (
             <button
               key={item.path}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => go(item)}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-ink-soft hover:bg-paper hover:text-ink"
+              style={{ animationDelay: `${i * 25}ms` }}
+              className="flex w-full animate-[fade-in-up_0.2s_ease-out_both] items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-ink-soft transition-colors duration-150 hover:bg-paper hover:text-ink"
             >
               <item.icon className="h-4 w-4 text-ink-muted" />
               {item.label}

@@ -18,7 +18,7 @@ const DAY = 86400000;
 // flag. Laying the active projects out on one shared dotted route (the
 // same motif the task StatusTracker uses) is the one bold move on this
 // page — everything else stays as quiet as the rest of the app.
-export default function ProjectRoute({ projects = [] }) {
+export default function ProjectRoute({ projects = [], basePath = '/admin/projects' }) {
   const withDates = projects.filter((p) => p.startDate && p.endDate);
 
   let rangeStart;
@@ -82,7 +82,7 @@ export default function ProjectRoute({ projects = [] }) {
               return (
                 <Link
                   key={project.id}
-                  to={`/admin/projects/${project.id}`}
+                  to={`${basePath}/${project.id}`}
                   className="group block rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-paper"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">

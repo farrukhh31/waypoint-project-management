@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Pencil, Trash2, Crown } from 'lucide-react';
+import { Pencil, Trash2, Crown, AlertTriangle, Flame } from 'lucide-react';
 import clsx from 'clsx';
 import Badge from '../ui/Badge.jsx';
 import Avatar from '../ui/Avatar.jsx';
 import AvatarStack from '../ui/AvatarStack.jsx';
 import { PROJECT_STATUS_META, PRIORITY_META, PROJECT_STATUS_TONE } from '../../config/statuses';
-import { formatDueDate } from '../../utils/formatDate';
+import { formatDueDate, isDeadlineCritical } from '../../utils/formatDate';
 
 const STATUS_BAR = Object.fromEntries(Object.entries(PROJECT_STATUS_TONE).map(([k, v]) => [k, v.bar]));
 
@@ -14,6 +14,7 @@ export default function ProjectListRow({ project, basePath, canManage = false, o
   const progressPct = progress.total ? Math.round((progress.completed / progress.total) * 100) : 0;
   const dueLabel = formatDueDate(project.endDate);
   const isOverdue = dueLabel.includes('overdue') && project.status !== 'COMPLETED' && project.status !== 'CANCELLED';
+  const isCritical = isDeadlineCritical(project.endDate, project.status);
 
   function stop(e, fn) {
     e.preventDefault();
@@ -22,7 +23,14 @@ export default function ProjectListRow({ project, basePath, canManage = false, o
   }
 
   return (
-    <Link to={`${basePath}/${project.id}`} className="group relative flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-paper">
+    <Link
+      to={`${basePath}/${project.id}`}
+      className={clsx(
+        'group relative flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-paper',
+        // Deadline inside the next 24 hours — same blink meetings get.
+        isCritical && 'urgent-blink'
+      )}
+    >
       <span className={clsx('h-8 w-1 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-y-110', STATUS_BAR[project.status])} />
 
       <div className="min-w-0 flex-1">
@@ -31,6 +39,18 @@ export default function ProjectListRow({ project, basePath, canManage = false, o
             {project.name}
           </p>
           <Badge meta={PROJECT_STATUS_META[project.status]} />
+          {progress.overdue > 0 && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger-50 px-2 py-0.5 text-[11px] font-medium text-danger-600">
+              <AlertTriangle className="h-3 w-3" strokeWidth={2.5} />
+              {progress.overdue} overdue
+            </span>
+          )}
+          {isCritical && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+              <Flame className="h-3 w-3" strokeWidth={2.5} />
+              24h
+            </span>
+          )}
         </div>
         {project.description && <p className="mt-0.5 truncate text-xs text-ink-muted">{project.description}</p>}
       </div>

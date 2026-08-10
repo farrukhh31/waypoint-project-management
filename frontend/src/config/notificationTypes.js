@@ -8,6 +8,9 @@ import {
   Send,
   CheckCircle2,
   RotateCcw,
+  CalendarClock,
+  CalendarCheck2,
+  CalendarX2,
 } from 'lucide-react';
 
 // Mirrors the Notification.type ENUM in the backend model. Each entry drives
@@ -26,6 +29,9 @@ export const NOTIFICATION_TYPES = [
   'PROJECT_SUBMITTED',
   'PROJECT_APPROVED',
   'PROJECT_CHANGES_REQUESTED',
+  'MEETING_INVITE',
+  'MEETING_REMINDER',
+  'MEETING_CANCELLED',
 ];
 
 export const NOTIFICATION_TYPE_META = {
@@ -111,6 +117,27 @@ export const NOTIFICATION_TYPE_META = {
     icon: RotateCcw,
     chip: 'bg-danger-500 text-white',
     dot: 'bg-danger-500',
+    wash: 'bg-danger-50/60',
+  },
+  MEETING_INVITE: {
+    label: 'Meeting invites',
+    icon: CalendarClock,
+    chip: 'bg-route-500 text-white',
+    dot: 'bg-route-500',
+    wash: 'bg-route-50/60',
+  },
+  MEETING_REMINDER: {
+    label: 'Meeting reminders',
+    icon: CalendarCheck2,
+    chip: 'bg-accent-400 text-white',
+    dot: 'bg-accent-400',
+    wash: 'bg-accent-50/60',
+  },
+  MEETING_CANCELLED: {
+    label: 'Meeting cancellations',
+    icon: CalendarX2,
+    chip: 'bg-danger-400 text-white',
+    dot: 'bg-danger-400',
     wash: 'bg-danger-50/60',
   },
 };

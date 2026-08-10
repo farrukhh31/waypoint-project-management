@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import Card, { CardHeader, CardBody } from '../ui/Card.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
@@ -46,7 +47,7 @@ function buildGrid(monthDate) {
   });
 }
 
-export default function MeetingsCard() {
+export default function MeetingsCard({ basePath }) {
   const today = new Date();
   const [visibleMonth, setVisibleMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
@@ -66,9 +67,15 @@ export default function MeetingsCard() {
 
   return (
     <Card className="overflow-hidden transition-shadow duration-200 hover:shadow-pop">
-      <CardHeader className="bg-gradient-to-r from-route-50/60 via-surface to-surface">
+      <CardHeader className="bg-gradient-to-r from-route-400/10 via-surface to-surface">
         <h3 className="font-display text-base font-semibold text-ink">Meetings</h3>
-        <CalendarClock className="h-4 w-4 text-ink-muted" />
+        {basePath ? (
+          <Link to={`${basePath}/meetings`} className="text-xs font-medium text-route-600 hover:underline">
+            View all
+          </Link>
+        ) : (
+          <CalendarClock className="h-4 w-4 text-ink-muted" />
+        )}
       </CardHeader>
       <CardBody className="flex flex-col gap-4">
         <div className="rounded-lg border border-line bg-paper/60 p-3 shadow-[inset_0_1px_2px_rgba(18,23,43,0.04)]">

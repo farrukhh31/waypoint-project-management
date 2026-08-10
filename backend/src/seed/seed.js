@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const { sequelize, User, Project, ProjectMember, Task, TaskDiscussion, TimeEntry, Meeting, TaskDependency, ActivityLog, Notification } = require('../models');
+const { sequelize, User, Project, ProjectMember, Task, TaskDiscussion, TimeEntry, Meeting, MeetingAttendee, TaskDependency, ActivityLog, Notification } = require('../models');
 const { randomAvatarUrl } = require('../utils/avatar');
 
 async function seed() {
@@ -9,12 +9,12 @@ async function seed() {
   console.log('Clearing existing data...');
   if (sequelize.getDialect() === 'postgres') {
     await sequelize.query(
-      'TRUNCATE TABLE activity_logs, task_discussions, notifications, refresh_tokens, invites, time_entries, meetings, task_dependencies, tasks, project_members, projects, users RESTART IDENTITY CASCADE;'
+      'TRUNCATE TABLE activity_logs, task_discussions, notifications, refresh_tokens, invites, time_entries, meeting_attendees, meetings, task_dependencies, tasks, project_members, projects, users RESTART IDENTITY CASCADE;'
     );
   } else {
     // SQLite has no TRUNCATE; delete in FK-safe (child-first) order instead.
     const { ActivityLog, TaskDiscussion, Notification, RefreshToken, Invite, Task, ProjectMember, Project } = require('../models');
-    for (const Model of [ActivityLog, TaskDiscussion, Notification, RefreshToken, Invite, TimeEntry, Meeting, TaskDependency, Task, ProjectMember, Project, User]) {
+    for (const Model of [ActivityLog, TaskDiscussion, Notification, RefreshToken, Invite, TimeEntry, MeetingAttendee, Meeting, TaskDependency, Task, ProjectMember, Project, User]) {
       await Model.destroy({ where: {}, truncate: true, force: true });
     }
   }
@@ -396,9 +396,9 @@ async function seed() {
     { validate: true }
   );
 
-  // A running timer + a few of today's meetings for the admin account, so
-  // the Time tracking / Today's meetings dashboard widgets have something
-  // to show immediately after seeding.
+  // A running timer + a couple of stopped history entries for the admin
+  // account, so the Time tracking widget/page has something to show
+  // immediately after seeding — one live, some already in the history list.
   const now = new Date();
   const startedAt = new Date(now.getTime() - 45 * 60 * 1000); // started 45 min ago
   await TimeEntry.create({
@@ -411,17 +411,102 @@ async function seed() {
     accumulatedSeconds: 0,
   });
 
+  function stoppedEntry({ label, userId, projectId, taskId, daysAgo, hours }) {
+    const start = new Date(now.getTime() - daysAgo * 86400000);
+    start.setHours(9, 0, 0, 0);
+    const seconds = Math.round(hours * 3600);
+    return {
+      label,
+      userId,
+      projectId: projectId || null,
+      taskId: taskId || null,
+      status: 'STOPPED',
+      startedAt: start,
+      lastResumedAt: null,
+      accumulatedSeconds: seconds,
+      stoppedAt: new Date(start.getTime() + seconds * 1000),
+    };
+  }
+  await TimeEntry.bulkCreate([
+    stoppedEntry({ label: 'Client Portal — API integration', userId: admin.id, projectId: project1.id, taskId: t1.id, daysAgo: 1, hours: 2.5 }),
+    stoppedEntry({ label: 'Sprint planning', userId: admin.id, projectId: project1.id, daysAgo: 2, hours: 1 }),
+    stoppedEntry({ label: 'Bug triage', userId: admin.id, projectId: project2.id, daysAgo: 3, hours: 1.75 }),
+    stoppedEntry({ label: 'Design review', userId: admin.id, projectId: project1.id, daysAgo: 6, hours: 0.75 }),
+  ]);
+
+  // Meetings — a mix of times today (including one starting soon, to show
+  // the "starting soon" highlight right after seeding) with real attendee
+  // lists so the multi-user Meetings pages have something to render.
   const today = new Date(now);
   function todayAt(hours, minutes) {
     const d = new Date(today);
     d.setHours(hours, minutes, 0, 0);
     return d;
   }
-  await Meeting.bulkCreate([
-    { userId: admin.id, title: 'Daily standup', startTime: todayAt(8, 30), endTime: todayAt(8, 45), reminderEnabled: true },
-    { userId: admin.id, title: 'XR Health sync', startTime: todayAt(10, 30), endTime: todayAt(11, 0), reminderEnabled: true },
-    { userId: admin.id, title: 'Team meeting', startTime: todayAt(16, 30), endTime: todayAt(17, 0), reminderEnabled: false },
-  ]);
+  const soon = new Date(now.getTime() + 8 * 60 * 1000); // 8 minutes from now
+  const soonEnd = new Date(soon.getTime() + 30 * 60 * 1000);
+
+  const meetingSeeds = [
+    {
+      title: 'Daily standup',
+      description: 'Quick round-robin on yesterday/today/blockers.',
+      startTime: todayAt(8, 30),
+      endTime: todayAt(8, 45),
+      location: 'Video call',
+      meetingLink: 'https://meet.google.com/waypoint-standup',
+      color: 'route',
+      organizer: admin,
+      attendees: [pm1, pm2, hamza, fatima],
+    },
+    {
+      title: 'Client Portal — sprint sync',
+      description: 'Review sprint progress and unblock the API integration work.',
+      startTime: soon,
+      endTime: soonEnd,
+      location: 'Conference Room B',
+      meetingLink: 'https://meet.google.com/waypoint-sprint',
+      color: 'accent',
+      organizer: pm1,
+      attendees: [admin, hamza, fatima, zainab],
+    },
+    {
+      title: 'XR Health sync',
+      description: 'Cross-team sync with the XR Health stakeholders.',
+      startTime: todayAt(13, 0),
+      endTime: todayAt(13, 30),
+      location: 'Video call',
+      meetingLink: 'https://meet.google.com/waypoint-xr-health',
+      color: 'sky',
+      organizer: admin,
+      attendees: [pm2, usman],
+    },
+    {
+      title: 'Team meeting',
+      description: 'Monthly all-hands — roadmap update and Q&A.',
+      startTime: todayAt(16, 30),
+      endTime: todayAt(17, 0),
+      location: 'Main Hall',
+      meetingLink: null,
+      color: 'teal',
+      organizer: admin,
+      attendees: [pm1, pm2, hamza, fatima, usman, zainab],
+    },
+  ];
+
+  for (const seedMeeting of meetingSeeds) {
+    const meeting = await Meeting.create({
+      title: seedMeeting.title,
+      description: seedMeeting.description,
+      startTime: seedMeeting.startTime,
+      endTime: seedMeeting.endTime,
+      location: seedMeeting.location,
+      meetingLink: seedMeeting.meetingLink,
+      color: seedMeeting.color,
+      userId: seedMeeting.organizer.id,
+    });
+    const attendeeIds = [...new Set([seedMeeting.organizer.id, ...seedMeeting.attendees.map((u) => u.id)])];
+    await MeetingAttendee.bulkCreate(attendeeIds.map((userId) => ({ meetingId: meeting.id, userId })));
+  }
 
   console.log('\nSeed complete! Demo accounts (all use password: Password123!):');
   console.log('  Admin:           admin@pmplatform.dev');
