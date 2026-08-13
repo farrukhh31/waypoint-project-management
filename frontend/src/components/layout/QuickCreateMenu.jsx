@@ -41,7 +41,7 @@ export default function QuickCreateMenu({ role, homePath }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-20 w-64 origin-top-right overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-pop animate-modal-pop">
+          <div className="fixed inset-x-3 top-[4.25rem] z-20 origin-top overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-pop animate-modal-pop sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-64 sm:origin-top-right">
             {actions.map(({ label, hint, icon: Icon, to }, i) => (
               <button
                 key={label}

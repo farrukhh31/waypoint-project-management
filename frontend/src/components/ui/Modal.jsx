@@ -1,9 +1,15 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 
-// Simple controlled modal: no portal library needed since the app has no
-// nested-scroll containers that would clip a fixed-position overlay.
+// Portalled straight onto <body>: every page's content wrapper carries a
+// `fade-in-up` mount animation (see PortalLayout), and even a settled
+// `translateY(0)` still counts as a CSS transform — which makes that
+// ancestor the containing block for any `position: fixed` descendant
+// instead of the viewport. Without the portal, this modal would center
+// itself inside that (often much taller, scrolled) content box rather
+// than the actual screen, landing well below the fold on long pages.
 export default function Modal({ open, onClose, title, children, className }) {
   useEffect(() => {
     if (!open) return undefined;
@@ -20,7 +26,7 @@ export default function Modal({ open, onClose, title, children, className }) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       onClick={onClose}
@@ -49,6 +55,7 @@ export default function Modal({ open, onClose, title, children, className }) {
         </div>
         <div className="scroll-hover overflow-y-auto p-4 sm:p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

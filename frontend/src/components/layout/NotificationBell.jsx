@@ -41,10 +41,15 @@ export default function NotificationBell({ homePath }) {
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 top-11 z-20 w-80 origin-top-right overflow-hidden rounded border border-line bg-surface shadow-pop animate-modal-pop"
-          onMouseLeave={() => setOpen(false)}
-        >
+        <>
+          {/* Tap-outside-to-close scrim — needed on mobile where the panel
+              below is fixed full-width and no longer sits "under" a pointer
+              that can mouseleave it. */}
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div
+            className="fixed inset-x-3 top-[4.25rem] z-20 max-h-[70vh] origin-top overflow-hidden rounded border border-line bg-surface shadow-pop animate-modal-pop sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-80 sm:origin-top-right sm:max-h-none"
+            onMouseLeave={() => setOpen(false)}
+          >
           <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
             <p className="text-sm font-medium text-ink">Notifications</p>
             {unreadCount > 0 && (
@@ -61,7 +66,7 @@ export default function NotificationBell({ homePath }) {
           {preview.length === 0 ? (
             <p className="px-3.5 py-6 text-center text-sm text-ink-muted">You're all caught up.</p>
           ) : (
-            <ul className="max-h-80 divide-y divide-line overflow-y-auto">
+            <ul className="max-h-[50vh] divide-y divide-line overflow-y-auto sm:max-h-80">
               {preview.map((n, i) => (
                 <li
                   key={n.id}
@@ -94,7 +99,8 @@ export default function NotificationBell({ homePath }) {
           >
             View all
           </button>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

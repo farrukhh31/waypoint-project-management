@@ -53,9 +53,9 @@ export default function GlobalSearch({ role }) {
         }}
         type="text"
         placeholder="Jump to a page…"
-        className="h-10 w-full rounded-full border border-line bg-paper pl-10 pr-14 text-sm text-ink placeholder:text-ink-muted transition-shadow focus:border-route-500 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-route-500/10"
+        className="h-10 w-full rounded-full border border-line bg-paper pl-10 pr-3 text-sm text-ink placeholder:text-ink-muted transition-shadow focus:border-route-500 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-route-500/10 sm:pr-14"
       />
-      <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
+      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-muted sm:block">
         ⌘K
       </kbd>
 

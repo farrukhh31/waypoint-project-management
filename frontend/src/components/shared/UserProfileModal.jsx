@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Mail,
   Phone,
@@ -136,7 +137,7 @@ export default function UserProfileModal({ userId, open, onClose }) {
 
   const tone = ROLE_TONE[user?.role] || ROLE_TONE[ROLES.TEAM_MEMBER];
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm"
       onClick={onClose}
@@ -279,6 +280,7 @@ export default function UserProfileModal({ userId, open, onClose }) {
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

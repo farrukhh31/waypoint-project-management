@@ -51,7 +51,7 @@ export default function Topbar({ title, onOpenMenu = () => {}, scrolled = false 
   return (
     <header
       className={clsx(
-        'relative z-10 flex h-16 shrink-0 items-center gap-3 border-b bg-surface px-4 transition-shadow duration-300 sm:gap-4 sm:px-6',
+        'relative z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-surface px-3 transition-shadow duration-300 sm:gap-4 sm:px-6',
         scrolled ? 'border-line shadow-[0_4px_16px_-8px_rgba(18,23,43,0.18)]' : 'border-line/0'
       )}
     >
@@ -70,11 +70,11 @@ export default function Topbar({ title, onOpenMenu = () => {}, scrolled = false 
         {title}
       </h1>
 
-      <div className="flex flex-1 justify-center lg:justify-start">
+      <div className="flex min-w-0 flex-1 justify-center lg:justify-start">
         <GlobalSearch role={user.role} />
       </div>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
         <QuickCreateMenu role={user.role} homePath={homePath} />
         <ThemeToggle className="hidden sm:inline-flex" />
         <NotificationBell homePath={homePath} />
@@ -112,11 +112,13 @@ export default function Topbar({ title, onOpenMenu = () => {}, scrolled = false 
 
           {/* Always mounted so the transition actually plays both ways;
               invisible + pointer-events-none keeps it out of tab order
-              and unclickable while closed. */}
+              and unclickable while closed. Fixed + inset-x-3 on mobile so
+              a 256px-wide panel never has to spill past a narrow viewport
+              edge; reverts to the normal button-anchored dropdown at sm+. */}
           <div
             role="menu"
             className={clsx(
-              'absolute right-0 top-[calc(100%+10px)] z-20 w-64 origin-top-right overflow-hidden rounded-2xl border border-line bg-surface/95 shadow-pop backdrop-blur-xl transition-all duration-200 ease-out',
+              'fixed inset-x-3 top-[4.25rem] z-20 origin-top overflow-hidden rounded-2xl border border-line bg-surface/95 shadow-pop backdrop-blur-xl transition-all duration-200 ease-out sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+10px)] sm:w-64 sm:origin-top-right',
               menuOpen
                 ? 'visible translate-y-0 scale-100 opacity-100'
                 : 'invisible pointer-events-none -translate-y-1 scale-95 opacity-0'
