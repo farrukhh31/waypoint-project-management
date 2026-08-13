@@ -10,6 +10,19 @@ const { startMeetingReminderScheduler } = require('./services/meetingReminderSch
 
 const PORT = process.env.PORT || 5000;
 
+// Neon (and other serverless Postgres) can suspend/drop idle connections at
+// any time. The pool retry settings in database.js recycle connections
+// proactively, but if a drop is ever missed and surfaces as an unhandled
+// rejection, log it clearly instead of letting the process crash silently
+// with just a raw stack trace.
+process.on('unhandledRejection', (err) => {
+  if (err?.name?.includes('SequelizeConnection')) {
+    console.error('Database connection was dropped (likely Neon idle-suspend). Pool will reconnect on next query:', err.message);
+    return;
+  }
+  console.error('Unhandled rejection:', err);
+});
+
 async function start() {
   try {
     await sequelize.authenticate();

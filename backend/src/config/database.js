@@ -13,6 +13,25 @@ if (process.env.DB_DIALECT === 'postgres') {
     logging: false,
     dialectOptions: {
       ssl: process.env.DB_SSL === 'true' ? { require: true, rejectUnauthorized: false } : false,
+      // Neon's serverless compute can suspend or drop idle connections at
+      // any time. Without keepAlive, that shows up as an uncaught
+      // 'Connection terminated unexpectedly' error that crashes the whole
+      // process instead of just recycling the pooled connection.
+      keepAlive: true,
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      // Recycle connections *before* Neon's own idle timeout can kill them
+      // out from under Sequelize — this is what actually prevents the crash,
+      // not just keepAlive alone.
+      idle: 10000,
+      acquire: 30000,
+      evict: 10000,
+    },
+    retry: {
+      max: 3,
+      match: [/ConnectionError/, /ConnectionRefusedError/, /ConnectionTimedOutError/, /TimeoutError/],
     },
   });
 } else {
