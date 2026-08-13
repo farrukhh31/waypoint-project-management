@@ -5,3 +5,5 @@ dev.db
 npm-debug.log*
 .DS_Store
 coverage/
+
+.env
