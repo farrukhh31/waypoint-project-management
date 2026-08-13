@@ -107,7 +107,14 @@ const createInvite = catchAsync(async (req, res) => {
   });
 
   const link = buildInviteLink(raw);
-  await sendInviteEmail({ email, link, invitedByName: req.user.name });
+
+  // Don't await this — sending the response before the Gmail SMTP round trip
+  // completes avoids the request stalling long enough to hit Vercel's proxy
+  // timeout (rewrites to an external backend get killed if it doesn't
+  // respond in time). sendInviteEmail already catches its own errors and
+  // logs them, and the link is returned in the response below as a fallback
+  // regardless of whether the email lands.
+  sendInviteEmail({ email, link, invitedByName: req.user.name });
 
   res.status(201).json({
     success: true,
@@ -165,7 +172,7 @@ const resendInvite = catchAsync(async (req, res) => {
   await invite.save();
 
   const link = buildInviteLink(raw);
-  await sendInviteEmail({ email: invite.email, link, invitedByName: req.user.name });
+  sendInviteEmail({ email: invite.email, link, invitedByName: req.user.name });
 
   res.json({ success: true, message: 'Invite resent.', data: { invite: invite.toSafeJSON(), inviteLink: link } });
 });
