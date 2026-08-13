@@ -1,25 +1,26 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 const { Op } = require('sequelize');
 const { User, Task, Project, ProjectMember, ActivityLog, RefreshToken } = require('../models');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { buildSort, containsInsensitive, paginationParams, paginationMeta } = require('../utils/queryHelpers');
 const { BCRYPT_SALT_ROUNDS } = require('../config/security');
-const { AVATAR_DIR, AVATAR_URL_PREFIX } = require('../middleware/uploadAvatar');
+const cloudinary = require('../config/cloudinary');
 const { sendMail } = require('../services/mailService');
 const { generateSecret, verifyTOTP, buildOtpAuthUri } = require('../utils/totp');
 const { consumeBackupCode } = require('../utils/backupCodes');
 
-// Best-effort cleanup of a previously-uploaded avatar file when it's replaced
-// or removed. Never throws — a stray orphaned file on disk is harmless, but
-// failing the request over a delete error would not be.
-function deleteLocalAvatarFile(avatarUrl) {
-  if (typeof avatarUrl !== 'string' || !avatarUrl.startsWith(AVATAR_URL_PREFIX)) return;
-  const filePath = path.join(AVATAR_DIR, path.basename(avatarUrl));
-  fs.unlink(filePath, () => {});
+// Best-effort cleanup of a previously-uploaded avatar when it's replaced or
+// removed. Never throws — a stray orphaned asset on Cloudinary is harmless,
+// but failing the request over a delete error would not be. Derives the
+// Cloudinary public_id back out of the stored secure URL (.../upload/v.../
+// pm-platform/avatars/<id>.<ext>) since we only persist the URL on the user.
+function deleteCloudinaryAvatar(avatarUrl) {
+  if (typeof avatarUrl !== 'string' || !avatarUrl.includes('/pm-platform/avatars/')) return;
+  const match = avatarUrl.match(/\/pm-platform\/avatars\/([^./]+)/);
+  if (!match) return;
+  cloudinary.uploader.destroy(`pm-platform/avatars/${match[1]}`, { resource_type: 'image' }, () => {});
 }
 
 const USER_SORT_FIELDS = ['createdAt', 'name', 'email', 'role'];
@@ -203,9 +204,12 @@ const uploadAvatar = catchAsync(async (req, res) => {
   if (!req.file) throw ApiError.badRequest('No image file was uploaded.');
 
   const previousAvatarUrl = req.user.avatarUrl;
-  req.user.avatarUrl = `${AVATAR_URL_PREFIX}${req.file.filename}`;
+  // CloudinaryStorage populates req.file.path with the uploaded asset's
+  // public secure URL — that's what we store and later serve back to the
+  // frontend directly (no /api/uploads proxying needed anymore).
+  req.user.avatarUrl = req.file.path;
   await req.user.save();
-  deleteLocalAvatarFile(previousAvatarUrl);
+  deleteCloudinaryAvatar(previousAvatarUrl);
 
   res.json({ success: true, message: 'Photo updated.', data: { user: req.user.toSafeJSON() } });
 });
@@ -214,7 +218,7 @@ const removeAvatar = catchAsync(async (req, res) => {
   const previousAvatarUrl = req.user.avatarUrl;
   req.user.avatarUrl = null;
   await req.user.save();
-  deleteLocalAvatarFile(previousAvatarUrl);
+  deleteCloudinaryAvatar(previousAvatarUrl);
 
   res.json({ success: true, message: 'Photo removed.', data: { user: req.user.toSafeJSON() } });
 });

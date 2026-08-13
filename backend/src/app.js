@@ -1,5 +1,4 @@
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -45,10 +44,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(hpp()); // strips duplicate query params (?role=ADMIN&role=x) that could confuse filters
 if (process.env.NODE_ENV !== 'test') app.use(morgan('dev'));
-
-// Uploaded avatar images — public read, same origin as /api so the Vite
-// dev proxy and any same-origin prod deploy both resolve it without extra config.
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // General API rate limit — generous, mainly to blunt scraping/DoS-style abuse.
 const apiLimiter = rateLimit({

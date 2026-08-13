@@ -1,31 +1,31 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const ApiError = require('../utils/ApiError');
+const cloudinary = require('../config/cloudinary');
 
-// Stored outside src/ so it survives a `git pull` / redeploy that replaces
-// the app code. Public URL prefix mirrors the static mount added in app.js.
-const AVATAR_DIR = path.join(__dirname, '../../uploads/avatars');
-fs.mkdirSync(AVATAR_DIR, { recursive: true });
-
-const AVATAR_URL_PREFIX = '/api/uploads/avatars/';
+// Avatars go to Cloudinary rather than local disk for the same reason as
+// upload.js — local disk on Render/Railway doesn't survive a redeploy.
+// req.file.path (populated by CloudinaryStorage) is the public Cloudinary
+// URL, and req.file.filename is the Cloudinary public_id — used below by
+// userController.js to store/delete the right asset.
 
 const ALLOWED_MIME_EXT = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, AVATAR_DIR),
-  filename: (req, file, cb) => {
-    const ext = ALLOWED_MIME_EXT[file.mimetype] || path.extname(file.originalname) || '';
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => ({
+    folder: 'pm-platform/avatars',
     // userId prefix keeps files traceable/groupable; random suffix avoids
     // collisions and stops old cached browser copies from being reused.
-    cb(null, `${req.user.id}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`);
-  },
+    public_id: `${req.user.id}-${Date.now()}`,
+    format: ALLOWED_MIME_EXT[file.mimetype],
+    resource_type: 'image',
+  }),
 });
 
 const upload = multer({
@@ -41,6 +41,4 @@ const upload = multer({
 
 module.exports = {
   uploadAvatarMiddleware: upload.single('avatar'),
-  AVATAR_DIR,
-  AVATAR_URL_PREFIX,
 };

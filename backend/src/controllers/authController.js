@@ -17,8 +17,12 @@ const {
 
 const REFRESH_COOKIE_OPTS = {
   httpOnly: true,
+  // 'none' is required once frontend and backend live on different domains
+  // (e.g. Vercel + Render) — browsers won't send a 'lax' cookie cross-site.
+  // 'none' requires secure: true, which in turn requires HTTPS (both Vercel
+  // and Render serve HTTPS by default, so this is safe in production).
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   path: '/api/auth',
 };
 

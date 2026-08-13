@@ -12,7 +12,10 @@ const uploadFiles = catchAsync(async (req, res) => {
 
   const uploaded = files.map((f) => ({
     name: f.originalname,
-    url: `/uploads/${f.filename}`,
+    // CloudinaryStorage populates f.path with the asset's public secure URL
+    // directly — no local /uploads/ prefix needed since the file never
+    // touches this server's disk.
+    url: f.path,
     size: f.size,
     mimeType: f.mimetype,
   }));
