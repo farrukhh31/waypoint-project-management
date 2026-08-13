@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Trash2, Crown, AlertTriangle, Flame } from 'lucide-react';
 import clsx from 'clsx';
@@ -9,7 +10,7 @@ import { formatDueDate, isDeadlineCritical } from '../../utils/formatDate';
 
 const STATUS_BAR = Object.fromEntries(Object.entries(PROJECT_STATUS_TONE).map(([k, v]) => [k, v.bar]));
 
-export default function ProjectListRow({ project, basePath, canManage = false, onEdit, onDelete }) {
+function ProjectListRow({ project, basePath, canManage = false, onEdit, onDelete }) {
   const progress = project.progress ?? { total: 0, completed: 0 };
   const progressPct = progress.total ? Math.round((progress.completed / progress.total) * 100) : 0;
   const dueLabel = formatDueDate(project.endDate);
@@ -91,7 +92,7 @@ export default function ProjectListRow({ project, basePath, canManage = false, o
       </div>
 
       {canManage && (
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
           <button
             type="button"
             onClick={(e) => stop(e, onEdit)}
@@ -113,3 +114,5 @@ export default function ProjectListRow({ project, basePath, canManage = false, o
     </Link>
   );
 }
+
+export default memo(ProjectListRow);

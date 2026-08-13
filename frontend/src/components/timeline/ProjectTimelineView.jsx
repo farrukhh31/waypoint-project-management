@@ -37,46 +37,47 @@ export default function ProjectTimelineView({ projects = [], basePath = '/admin/
   const now = new Date();
   const todayPct = now >= rangeStart && now <= rangeEnd ? (diffDays(now, rangeStart) / totalSpan) * 100 : null;
 
-  const list = compact ? withDates.slice(0, 5) : withDates;
+  const list = compact ? withDates.slice(0, 6) : withDates;
 
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
-      {!compact && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-          <div className="flex items-center gap-3">
-            {Object.entries(PRIORITY_BAR).map(([priority, cls]) => (
-              <span key={priority} className="flex items-center gap-1.5">
-                <span className={`h-1.5 w-1.5 rounded-full ${cls}`} />
-                {priority[0] + priority.slice(1).toLowerCase()}
-              </span>
-            ))}
-          </div>
-          <span className="font-mono">
-            {formatDate(rangeStart)} — {formatDate(rangeEnd)}
-          </span>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
+        <div className="flex items-center gap-3">
+          {Object.entries(PRIORITY_BAR).map(([priority, cls]) => (
+            <span key={priority} className="flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${cls}`} />
+              {priority[0] + priority.slice(1).toLowerCase()}
+            </span>
+          ))}
         </div>
-      )}
+        <span className="font-mono">
+          {formatDate(rangeStart)} — {formatDate(rangeEnd)}
+        </span>
+      </div>
 
-      <div className={`flex flex-1 flex-col gap-3 ${compact ? 'justify-between' : ''}`}>
+      <div className="flex flex-1 flex-col gap-3">
         {list.map((project, i) => {
           const start = new Date(project.startDate);
           const end = new Date(project.endDate);
           const left = (diffDays(start, rangeStart) / totalSpan) * 100;
           const width = Math.max((diffDays(end, start) / totalSpan) * 100, 3);
           const statusMeta = PROJECT_STATUS_META[project.status];
+          const progress = project.progress;
+          const donePct = progress?.total ? Math.round((progress.completed / progress.total) * 100) : null;
+          const elapsedPct = Math.min(100, Math.max(0, (diffDays(now, start) / Math.max(diffDays(end, start), 1)) * 100));
 
           return (
             <TiltCard
               key={project.id}
               maxTilt={3}
-              className={`rounded-lg ${compact ? 'flex-1' : ''} ${compact ? 'animate-[fade-in-up_0.5s_ease-out_both]' : ''}`}
+              className={`rounded-lg ${compact ? 'animate-[fade-in-up_0.5s_ease-out_both]' : ''}`}
               style={compact ? { animationDelay: `${i * 70}ms` } : undefined}
             >
               <Link
                 to={`${basePath}/${project.id}`}
-                className="group flex h-full flex-col justify-center rounded-lg border border-line bg-surface px-4 py-3 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop"
+                className="group flex h-full flex-col justify-center gap-2.5 rounded-lg border border-line bg-surface px-4 py-3.5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop"
               >
-                <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium text-ink group-hover:text-route-600">
                       {project.name}
@@ -120,14 +121,34 @@ export default function ProjectTimelineView({ projects = [], basePath = '/admin/
                     </span>
                   </div>
                 </div>
+
+                {/* Task-progress footer — fills the card with the same real
+                    per-project counts Reports/AtRiskProjects use, instead of
+                    leaving the row as just a thin route bar on empty card. */}
+                <div className="flex items-center gap-3">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-paper">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-route-400 to-route-500 transition-all duration-700 ease-out"
+                      style={{ width: `${donePct ?? elapsedPct}%` }}
+                    />
+                  </div>
+                  {progress?.total ? (
+                    <span className="shrink-0 whitespace-nowrap text-[11px] text-ink-muted">
+                      <span className="font-semibold text-ink-soft">{progress.completed}</span>/{progress.total} tasks done
+                      {progress.overdue > 0 && <span className="ml-1.5 text-danger-600">· {progress.overdue} overdue</span>}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 whitespace-nowrap text-[11px] text-ink-muted">No tasks yet</span>
+                  )}
+                </div>
               </Link>
             </TiltCard>
           );
         })}
       </div>
 
-      {compact && withDates.length > 5 && (
-        <p className="pt-1 text-center text-xs text-ink-muted">+{withDates.length - 5} more on the full timeline</p>
+      {compact && withDates.length > 6 && (
+        <p className="pt-1 text-center text-xs text-ink-muted">+{withDates.length - 6} more on the full timeline</p>
       )}
     </div>
   );

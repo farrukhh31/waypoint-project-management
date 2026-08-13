@@ -7,6 +7,9 @@ import TimelineSwitch from '../timeline/TimelineSwitch.jsx';
 import ProjectTimelineView from '../timeline/ProjectTimelineView.jsx';
 import TaskGanttView from '../timeline/TaskGanttView.jsx';
 import MilestonesView from '../timeline/MilestonesView.jsx';
+import ProjectSpotlight, { pickSpotlightProject } from './ProjectSpotlight.jsx';
+import OnDeckTasks, { pickOnDeckTasks } from './OnDeckTasks.jsx';
+import TeamLoadStrip from './TeamLoadStrip.jsx';
 import { startOfDay } from '../../utils/timelineScale';
 
 const ALL_VIEWS = [
@@ -55,6 +58,9 @@ export default function TimelineWidget({
     return { onTrack, dueSoon, overdue };
   }, [tasks]);
 
+  const spotlightProject = useMemo(() => pickSpotlightProject(projects), [projects]);
+  const onDeckTasks = useMemo(() => pickOnDeckTasks(tasks), [tasks]);
+
   const PULSE_ITEMS = [
     { key: 'onTrack', label: 'On track', value: pulse.onTrack, icon: CheckCircle2, tone: 'text-success-600', dot: 'bg-success-400' },
     { key: 'dueSoon', label: 'Due soon', value: pulse.dueSoon, icon: Clock, tone: 'text-accent-600', dot: 'bg-accent-400' },
@@ -70,12 +76,14 @@ export default function TimelineWidget({
         </div>
         <TimelineSwitch views={VIEWS} active={view} onChange={setView} />
       </CardHeader>
-      <CardBody className="flex flex-1 flex-col">
-        {/* Fills whatever height the sibling column (TimeTracking + Meetings)
-            gives this card, instead of being capped at a fixed height that
-            left empty space below on taller layouts. Scrolls internally
-            once content genuinely exceeds that space. */}
-        <div className="min-h-[200px] flex-1 overflow-y-auto pr-1">
+      <CardBody className="flex flex-1 flex-col gap-4">
+        {/* Spotlight gives the widget one real, meaningfully-sized story
+            (the project needing attention soonest) instead of leaning on
+            justify-center to paper over a short list with empty space. */}
+        {spotlightProject && <ProjectSpotlight project={spotlightProject} basePath={projectsBasePath} />}
+        <OnDeckTasks tasks={onDeckTasks} basePath={tasksBasePath} />
+
+        <div className="min-h-[160px] flex-1 overflow-y-auto pr-1">
           {view === 'PROJECTS' && (
             <ProjectTimelineView projects={projects} basePath={projectsBasePath} compact className="flex-1" />
           )}
@@ -93,10 +101,8 @@ export default function TimelineWidget({
           )}
         </div>
 
-        {/* Pulse strip — real counts from the same task list, not filler.
-            Occupies the space that used to sit empty under the scroll area
-            and gives a reason to glance here even without switching tabs. */}
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        {/* Pulse strip — real counts from the same task list, not filler. */}
+        <div className="grid grid-cols-3 gap-2">
           {PULSE_ITEMS.map((item, i) => (
             <div
               key={item.key}
@@ -113,9 +119,14 @@ export default function TimelineWidget({
           ))}
         </div>
 
+        {/* Team load — who's actually carrying the open work, giving the
+            bottom of the card a real close instead of the pulse grid
+            dropping straight into the thin footer link. */}
+        <TeamLoadStrip tasks={tasks} />
+
         <Link
           to={fullPath}
-          className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2 text-xs font-medium text-route-600 transition-colors hover:bg-paper hover:shadow-card"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2 text-xs font-medium text-route-600 transition-colors hover:bg-paper hover:shadow-card"
         >
           {fullLabel}
           <ArrowUpRight className="h-3.5 w-3.5" />

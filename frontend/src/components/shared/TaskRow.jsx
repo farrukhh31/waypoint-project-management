@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Send, AlertTriangle, CalendarDays, Flame } from 'lucide-react';
 import clsx from 'clsx';
@@ -16,7 +17,10 @@ import { ROLES } from '../../config/roles';
  *   fires for tasks in projects they actually manage (not just any REVIEW
  *   row that happens to render in a shared list).
  */
-export default function TaskRow({ task, basePath, showAssignee = true, viewerRole, viewerId }) {
+// Task lists commonly render dozens of these — memoized so a parent-level
+// state change (filter input, a sibling row's optimistic update) doesn't
+// re-render every row in the list.
+function TaskRow({ task, basePath, showAssignee = true, viewerRole, viewerId }) {
   const dueLabel = formatDueDate(task.dueDate);
   const isOverdue = dueLabel.includes('overdue') && task.status !== 'COMPLETED';
   const isCritical = isDeadlineCritical(task.dueDate, task.status);
@@ -40,7 +44,7 @@ export default function TaskRow({ task, basePath, showAssignee = true, viewerRol
     <Link
       to={`${basePath}/${task.id}`}
       className={clsx(
-        'group relative flex items-center gap-4 px-5 py-3.5 transition-all duration-150 hover:bg-paper',
+        'group relative flex items-center gap-3 px-3.5 py-3 transition-all duration-150 hover:bg-paper sm:gap-4 sm:px-5 sm:py-3.5',
         isReviewerHere && 'bg-accent-50/30',
         // Deadline inside the next 24 hours — same blink meetings get.
         isCritical && 'urgent-blink'
@@ -109,3 +113,5 @@ export default function TaskRow({ task, basePath, showAssignee = true, viewerRol
     </Link>
   );
 }
+
+export default memo(TaskRow);

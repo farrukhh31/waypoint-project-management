@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pencil, Trash2, Mail, Briefcase as BriefcaseIcon, ShieldCheck, Briefcase, Users as UsersIcon, Eye } from 'lucide-react';
 import clsx from 'clsx';
 import Card from '../ui/Card.jsx';
@@ -40,7 +41,9 @@ const ROLE_TONE = {
   },
 };
 
-export default function UserCard({ user, canManage, isSelf, onView, onEdit, onDelete, deleting, style }) {
+// Grid of these on the admin Users page can run into the dozens — memoized
+// for the same reason as ProjectCard/TaskRow.
+function UserCard({ user, canManage, isSelf, onView, onEdit, onDelete, deleting, style }) {
   const tone = ROLE_TONE[user.role] || ROLE_TONE[ROLES.TEAM_MEMBER];
   const RoleIcon = tone.icon;
   const [revealRef, revealed] = useScrollReveal();
@@ -96,7 +99,7 @@ export default function UserCard({ user, canManage, isSelf, onView, onEdit, onDe
 
           {/* Quick actions — scale + fade in on hover only, never steal the card click */}
           {canManage && (
-            <div className="absolute right-3 top-4 z-10 flex items-center gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+            <div className="absolute right-3 top-4 z-10 flex items-center gap-1 opacity-100 transition-all duration-200 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
               <button
                 type="button"
                 onClick={(e) => stop(e, onEdit)}
@@ -184,3 +187,5 @@ export default function UserCard({ user, canManage, isSelf, onView, onEdit, onDe
     </div>
   );
 }
+
+export default memo(UserCard);

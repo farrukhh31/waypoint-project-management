@@ -11,7 +11,7 @@ import GlobalSearch from './GlobalSearch.jsx';
 import QuickCreateMenu from './QuickCreateMenu.jsx';
 import ConfirmModal from '../ui/ConfirmModal.jsx';
 
-export default function Topbar({ title, onOpenMenu = () => {} }) {
+export default function Topbar({ title, onOpenMenu = () => {}, scrolled = false }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
@@ -49,7 +49,12 @@ export default function Topbar({ title, onOpenMenu = () => {} }) {
   }, [menuOpen]);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 sm:gap-4 sm:px-6">
+    <header
+      className={clsx(
+        'relative z-10 flex h-16 shrink-0 items-center gap-3 border-b bg-surface px-4 transition-shadow duration-300 sm:gap-4 sm:px-6',
+        scrolled ? 'border-line shadow-[0_4px_16px_-8px_rgba(18,23,43,0.18)]' : 'border-line/0'
+      )}
+    >
       <button
         type="button"
         onClick={onOpenMenu}

@@ -18,8 +18,7 @@ import PriorityBreakdown from '../../components/dashboard/PriorityBreakdown.jsx'
 import TeamPerformance from '../../components/dashboard/TeamPerformance.jsx';
 import DeadlinesPanel from '../../components/dashboard/DeadlinesPanel.jsx';
 import DeadlineCounter from '../../components/dashboard/DeadlineCounter.jsx';
-import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
-import OrgActivityFeed from '../../components/dashboard/OrgActivityFeed.jsx';
+import ActivityTimeline from '../../components/dashboard/ActivityTimeline.jsx';
 import ProjectRoute from '../../components/dashboard/ProjectRoute.jsx';
 import TimeTrackingCard from '../../components/dashboard/TimeTrackingCard.jsx';
 import MeetingsCard from '../../components/dashboard/MeetingsCard.jsx';
@@ -271,25 +270,20 @@ export default function PMDashboard() {
         </Reveal>
       </div>
 
-      {/* Activity — a quick weekly pulse plus the detailed, unfiltered
+      {/* Activity — one premium widget, weekly pulse plus the detailed
           feed, both scoped to just this PM's own projects. */}
       <div className="flex flex-col gap-4">
         <Reveal delay={40}>
           <SectionHeading eyebrow="Activity" title="Recent activity" description="Project, task, and team movement across your projects." />
         </Reveal>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Reveal delay={80}>
-            <ActivityFeed activityByDay={data?.activityByDay} />
-          </Reveal>
-          <Reveal delay={120}>
-            <OrgActivityFeed
-              logs={data?.recentActivity}
-              basePath="/pm/projects"
-              title="Detailed feed"
-              subtitle="Across your projects"
-            />
-          </Reveal>
-        </div>
+        <Reveal delay={80}>
+          <ActivityTimeline
+            activityByDay={data?.activityByDay}
+            logs={data?.recentActivity}
+            basePath="/pm/projects"
+            subtitle="Across your projects"
+          />
+        </Reveal>
       </div>
     </div>
   );

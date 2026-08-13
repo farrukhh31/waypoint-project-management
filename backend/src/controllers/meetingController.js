@@ -20,7 +20,7 @@ const attendeeUserAttrs = ['id', 'name', 'email', 'avatarUrl', 'role', 'jobTitle
 
 const meetingIncludes = [
   { model: User, as: 'organizer', attributes: attendeeUserAttrs },
-  { model: User, as: 'attendees', attributes: attendeeUserAttrs, through: { attributes: ['reminderEnabled'] } },
+  { model: User, as: 'attendees', attributes: attendeeUserAttrs, through: { attributes: ['reminderEnabled', 'rsvpStatus'] } },
 ];
 
 // Reshapes a loaded Meeting so the frontend gets one flat `reminderEnabled`
@@ -36,6 +36,7 @@ function present(meeting, viewerId) {
     role: a.role,
     jobTitle: a.jobTitle,
     reminderEnabled: a.MeetingAttendee?.reminderEnabled ?? true,
+    rsvpStatus: a.MeetingAttendee?.rsvpStatus ?? 'PENDING',
   }));
   const mine = attendees.find((a) => a.id === viewerId);
   return {
@@ -51,6 +52,8 @@ function present(meeting, viewerId) {
     organizer: json.organizer,
     attendees,
     reminderEnabled: mine ? mine.reminderEnabled : true,
+    myRsvpStatus: mine ? mine.rsvpStatus : null,
+    isAttendee: !!mine,
     isOrganizer: json.organizer?.id === viewerId,
     createdAt: json.createdAt,
     updatedAt: json.updatedAt,
@@ -152,7 +155,15 @@ const createMeeting = catchAsync(async (req, res) => {
     userId: req.user.id,
   });
 
-  await MeetingAttendee.bulkCreate(validIds.map((userId) => ({ meetingId: meeting.id, userId })));
+  await MeetingAttendee.bulkCreate(
+    validIds.map((userId) => ({
+      meetingId: meeting.id,
+      userId,
+      // The organizer scheduled it themselves, so they're accepted by
+      // default — everyone else starts PENDING until they respond.
+      rsvpStatus: userId === req.user.id ? 'ACCEPTED' : 'PENDING',
+    }))
+  );
 
   const others = validIds.filter((id) => id !== req.user.id);
   if (others.length) {
@@ -237,6 +248,18 @@ const toggleReminder = catchAsync(async (req, res) => {
   });
 });
 
+// PATCH /api/meetings/:id/rsvp — self-service, any attendee (including the
+// organizer) sets their own attendance status. No manage rights required.
+const setRsvp = catchAsync(async (req, res) => {
+  const link = await MeetingAttendee.findOne({ where: { meetingId: req.params.id, userId: req.user.id } });
+  if (!link) throw ApiError.notFound('You are not an attendee of this meeting.');
+
+  link.rsvpStatus = req.body.rsvpStatus;
+  await link.save();
+
+  res.json({ success: true, message: 'RSVP updated.', data: { rsvpStatus: link.rsvpStatus } });
+});
+
 // DELETE /api/meetings/:id — organizer or admin; notifies remaining attendees.
 const deleteMeeting = catchAsync(async (req, res) => {
   const meeting = await findMeetingWithAccess(req.params.id, req.user, { requireManage: true });
@@ -297,6 +320,7 @@ module.exports = {
   createMeeting,
   updateMeeting,
   toggleReminder,
+  setRsvp,
   deleteMeeting,
   listAllMeetings,
 };

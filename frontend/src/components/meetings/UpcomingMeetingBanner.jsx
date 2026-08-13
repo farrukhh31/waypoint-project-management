@@ -14,7 +14,7 @@ export default function UpcomingMeetingBanner({ meetings, onSelect }) {
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
         <Clock className="h-3.5 w-3.5" /> Starting soon
       </p>
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="scroll-hover flex snap-x snap-proximity gap-3 overflow-x-auto pb-1">
         {meetings.map((m) => {
           const tone = meetingColor(m.color);
           const imminent = m.minutesUntil <= 5;
@@ -24,7 +24,7 @@ export default function UpcomingMeetingBanner({ meetings, onSelect }) {
               type="button"
               onClick={() => onSelect(m)}
               className={clsx(
-                'flex min-w-[220px] shrink-0 flex-col gap-1.5 rounded-xl border p-3.5 text-left shadow-sm transition-transform hover:-translate-y-0.5',
+                'flex min-w-[220px] shrink-0 snap-start flex-col gap-1.5 rounded-xl border p-3.5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop',
                 'border-line bg-surface',
                 imminent && 'meeting-blink'
               )}

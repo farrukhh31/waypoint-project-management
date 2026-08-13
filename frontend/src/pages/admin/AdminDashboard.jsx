@@ -16,7 +16,7 @@ import SectionHeading from '../../components/dashboard/SectionHeading.jsx';
 import StatusBreakdown from '../../components/dashboard/StatusBreakdown.jsx';
 import DeadlinesPanel from '../../components/dashboard/DeadlinesPanel.jsx';
 import DeadlineCounter from '../../components/dashboard/DeadlineCounter.jsx';
-import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
+import ActivityTimeline from '../../components/dashboard/ActivityTimeline.jsx';
 import TimeTrackingCard from '../../components/dashboard/TimeTrackingCard.jsx';
 import MeetingsCard from '../../components/dashboard/MeetingsCard.jsx';
 import HealthSnapshot from '../../components/dashboard/HealthSnapshot.jsx';
@@ -190,7 +190,12 @@ export default function AdminDashboard() {
           <SectionHeading eyebrow="Activity" title="Recent activity" description="Project, task, and team movement this week." />
         </Reveal>
         <Reveal delay={80}>
-          <ActivityFeed activityByDay={data?.activityByDay} />
+          <ActivityTimeline
+            activityByDay={data?.activityByDay}
+            logs={data?.recentActivity}
+            basePath="/admin/projects"
+            subtitle="Across every project"
+          />
         </Reveal>
       </div>
     </div>

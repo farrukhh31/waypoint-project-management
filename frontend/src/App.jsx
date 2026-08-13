@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AuthLayout from './layouts/AuthLayout.jsx';
 import PortalLayout from './layouts/PortalLayout.jsx';
@@ -7,28 +8,31 @@ import { ROLES, ROLE_HOME } from './config/roles';
 import { useAuth } from './hooks/useAuth';
 import { useMinDuration } from './hooks/useMinDuration';
 
-import Login from './pages/auth/Login.jsx';
-import Register from './pages/auth/Register.jsx';
-import AcceptInvite from './pages/auth/AcceptInvite.jsx';
-import AdminDashboard from './pages/admin/AdminDashboard.jsx';
-import Users from './pages/admin/Users.jsx';
-import Timeline from './pages/admin/Timeline.jsx';
-import Reports from './pages/admin/Reports.jsx';
-import TeamWorkload from './pages/admin/TeamWorkload.jsx';
-import MemberReports from './pages/shared/MemberReports.jsx';
-import PMDashboard from './pages/pm/PMDashboard.jsx';
-import Members from './pages/pm/Members.jsx';
-import TeamDashboard from './pages/team/TeamDashboard.jsx';
-import Projects from './pages/shared/Projects.jsx';
-import ProjectDetails from './pages/shared/ProjectDetails.jsx';
-import Tasks from './pages/shared/Tasks.jsx';
-import TaskDetails from './pages/shared/TaskDetails.jsx';
-import Meetings from './pages/shared/Meetings.jsx';
-import TimeTracking from './pages/shared/TimeTracking.jsx';
-import Notifications from './pages/shared/Notifications.jsx';
-import Profile from './pages/shared/Profile.jsx';
-import Settings from './pages/shared/Settings.jsx';
-import NotFound from './pages/NotFound.jsx';
+// Route-level code splitting: every page is its own chunk, fetched only
+// when its route is actually visited, instead of one monolithic bundle
+// that ships all three portals (admin/pm/team) to every user up front.
+const Login = lazy(() => import('./pages/auth/Login.jsx'));
+const Register = lazy(() => import('./pages/auth/Register.jsx'));
+const AcceptInvite = lazy(() => import('./pages/auth/AcceptInvite.jsx'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const Users = lazy(() => import('./pages/admin/Users.jsx'));
+const Timeline = lazy(() => import('./pages/admin/Timeline.jsx'));
+const Reports = lazy(() => import('./pages/admin/Reports.jsx'));
+const TeamWorkload = lazy(() => import('./pages/admin/TeamWorkload.jsx'));
+const MemberReports = lazy(() => import('./pages/shared/MemberReports.jsx'));
+const PMDashboard = lazy(() => import('./pages/pm/PMDashboard.jsx'));
+const Members = lazy(() => import('./pages/pm/Members.jsx'));
+const TeamDashboard = lazy(() => import('./pages/team/TeamDashboard.jsx'));
+const Projects = lazy(() => import('./pages/shared/Projects.jsx'));
+const ProjectDetails = lazy(() => import('./pages/shared/ProjectDetails.jsx'));
+const Tasks = lazy(() => import('./pages/shared/Tasks.jsx'));
+const TaskDetails = lazy(() => import('./pages/shared/TaskDetails.jsx'));
+const Meetings = lazy(() => import('./pages/shared/Meetings.jsx'));
+const TimeTracking = lazy(() => import('./pages/shared/TimeTracking.jsx'));
+const Notifications = lazy(() => import('./pages/shared/Notifications.jsx'));
+const Profile = lazy(() => import('./pages/shared/Profile.jsx'));
+const Settings = lazy(() => import('./pages/shared/Settings.jsx'));
+const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 import FullScreenLoader from './components/ui/FullScreenLoader.jsx';
 import TopProgressBar from './components/ui/TopProgressBar.jsx';
 import SessionToast from './components/ui/SessionToast.jsx';
@@ -43,6 +47,7 @@ export default function App() {
     <>
     <TopProgressBar />
     <SessionToast />
+    <Suspense fallback={<FullScreenLoader />}>
     <Routes>
       {/* Public */}
       <Route element={<AuthLayout />}>
@@ -152,6 +157,7 @@ export default function App() {
 
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
     </>
   );
 }

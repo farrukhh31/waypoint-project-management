@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Outlet, useLocation, matchPath } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar.jsx';
 import Topbar from '../components/layout/Topbar.jsx';
@@ -63,13 +63,29 @@ export default function PortalLayout() {
   const location = useLocation();
   const title = useRouteTitle();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Drives a scroll-aware shadow on the topbar — flat while the page is
+  // pinned at the top, lifting to sit visibly above content once the user
+  // has scrolled, so the header always reads as "above" what's under it
+  // instead of blending into it on long pages.
+  const [scrolled, setScrolled] = useState(false);
+  const scrolledRef = useRef(false);
+  const handleMainScroll = useCallback((e) => {
+    const isScrolled = e.currentTarget.scrollTop > 4;
+    if (isScrolled !== scrolledRef.current) {
+      scrolledRef.current = isScrolled;
+      setScrolled(isScrolled);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-paper">
       <Sidebar role={user.role} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title={title} onOpenMenu={() => setMobileNavOpen(true)} />
-        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+        <Topbar title={title} onOpenMenu={() => setMobileNavOpen(true)} scrolled={scrolled} />
+        <main
+          onScroll={handleMainScroll}
+          className="flex-1 overflow-y-auto scroll-smooth px-4 py-5 sm:px-6 sm:py-6"
+        >
           {/* Re-keying on pathname remounts this wrapper on every navigation
               — sidebar link, topbar search, breadcrumb, anything — so each
               new page fades + lifts in instead of just snapping into place.

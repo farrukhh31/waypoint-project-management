@@ -276,7 +276,13 @@ const getDashboard = catchAsync(async (req, res) => {
     Task.count({ where: { assigneeId: user.id, dueDate: { [Op.lt]: new Date() }, status: { [Op.ne]: 'COMPLETED' } } }),
     Task.findAll({
       where: { assigneeId: user.id, dueDate: inNextDays(7), status: { [Op.ne]: 'COMPLETED' } },
-      include: [{ model: Project, as: 'project', attributes: ['id', 'name'] }],
+      include: [
+        { model: Project, as: 'project', attributes: ['id', 'name'] },
+        // Always this member themselves, but included for parity with the
+        // admin/PM deadline queries so DeadlinesPanel renders identically
+        // (avatar + name) across every role instead of a blank avatar here.
+        { model: User, as: 'assignee', attributes: ['id', 'name', 'avatarUrl'] },
+      ],
       order: [['dueDate', 'ASC']],
       limit: 10,
     }),

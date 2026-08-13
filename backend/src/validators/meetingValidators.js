@@ -34,6 +34,10 @@ const reminderSchema = z.object({
   reminderEnabled: z.boolean().optional(),
 });
 
+const rsvpSchema = z.object({
+  rsvpStatus: z.enum(['ACCEPTED', 'DECLINED', 'TENTATIVE', 'PENDING']),
+});
+
 const idParamSchema = z.object({ id: z.string().min(1) });
 
-module.exports = { createMeetingSchema, updateMeetingSchema, reminderSchema, idParamSchema };
+module.exports = { createMeetingSchema, updateMeetingSchema, reminderSchema, rsvpSchema, idParamSchema };

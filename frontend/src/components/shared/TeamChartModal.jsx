@@ -31,7 +31,7 @@ function PersonNode({ person, roleLabel, isManager = false, tasks, canRemove, on
           onClick={() => onRemove(person.id)}
           disabled={removing}
           aria-label={`Remove ${person.name}`}
-          className="absolute right-2 top-2 rounded p-1 text-ink-muted opacity-0 transition-opacity hover:bg-danger-50 hover:text-danger-600 disabled:opacity-50 group-hover:opacity-100"
+          className="absolute right-2 top-2 rounded p-1 text-ink-muted opacity-100 transition-opacity hover:bg-danger-50 hover:text-danger-600 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
         >
           <X className="h-3.5 w-3.5" />
         </button>

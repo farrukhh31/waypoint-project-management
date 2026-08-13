@@ -54,6 +54,16 @@ export function useMeetingsMonth(monthDate) {
     }
   }
 
+  async function setRsvp(meeting, rsvpStatus) {
+    setMeetings((prev) => (prev.map((m) => (m.id === meeting.id ? { ...m, myRsvpStatus: rsvpStatus } : m))));
+    try {
+      await api.patch(`/meetings/${meeting.id}/rsvp`, { rsvpStatus });
+      load();
+    } catch {
+      load();
+    }
+  }
+
   async function createMeeting(payload) {
     const { data } = await api.post('/meetings', payload);
     await load();
@@ -71,7 +81,7 @@ export function useMeetingsMonth(monthDate) {
     await load();
   }
 
-  return { meetings, byDay, loading, toggleReminder, createMeeting, updateMeeting, deleteMeeting, refetch: load };
+  return { meetings, byDay, loading, toggleReminder, setRsvp, createMeeting, updateMeeting, deleteMeeting, refetch: load };
 }
 
 export { dayKey };

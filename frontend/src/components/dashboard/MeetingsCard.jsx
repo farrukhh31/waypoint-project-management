@@ -1,13 +1,78 @@
 import { useState } from 'react';
-import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarClock, Check, ChevronLeft, ChevronRight, HelpCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import Card, { CardHeader, CardBody } from '../ui/Card.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
+import Avatar from '../ui/Avatar.jsx';
 import { useMeetingsMonth, dayKey } from '../../hooks/useMeetingsMonth';
 import { formatTime } from '../../utils/formatDate';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+// Ring color cue on each attendee's avatar, at a glance, without needing
+// to hover every face to see who's actually coming.
+const RSVP_RING = {
+  ACCEPTED: 'ring-2 ring-success-400',
+  DECLINED: 'ring-2 ring-danger-400 opacity-50',
+  TENTATIVE: 'ring-2 ring-accent-400',
+  PENDING: 'ring-2 ring-line',
+};
+
+function AttendeeStack({ attendees = [] }) {
+  if (!attendees.length) return null;
+  const shown = attendees.slice(0, 5);
+  const overflow = attendees.length - shown.length;
+  return (
+    <div className="flex items-center -space-x-2">
+      {shown.map((a) => (
+        <Avatar
+          key={a.id}
+          name={a.name}
+          src={a.avatarUrl}
+          size="sm"
+          className={clsx('ring-offset-2 ring-offset-surface', RSVP_RING[a.rsvpStatus] || RSVP_RING.PENDING)}
+        />
+      ))}
+      {overflow > 0 && (
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-paper text-[11px] font-semibold text-ink-muted ring-2 ring-surface">
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const RSVP_OPTIONS = [
+  { value: 'ACCEPTED', label: 'Accept', icon: Check, active: 'bg-success-500 text-white shadow-sm' },
+  { value: 'TENTATIVE', label: 'Maybe', icon: HelpCircle, active: 'bg-accent-400 text-white shadow-sm' },
+  { value: 'DECLINED', label: 'Decline', icon: X, active: 'bg-danger-500 text-white shadow-sm' },
+];
+
+function RsvpControl({ status, onChange }) {
+  return (
+    <div className="flex items-center gap-1">
+      {RSVP_OPTIONS.map(({ value, label, icon: Icon, active }) => {
+        const isActive = status === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            title={label}
+            aria-label={label}
+            onClick={() => onChange(isActive ? 'PENDING' : value)}
+            className={clsx(
+              'flex h-6 w-6 items-center justify-center rounded-full transition-all duration-150',
+              isActive ? active : 'bg-paper text-ink-muted hover:bg-line/60 hover:text-ink'
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function Toggle({ checked, onChange }) {
   return (
@@ -51,7 +116,7 @@ export default function MeetingsCard({ basePath }) {
   const today = new Date();
   const [visibleMonth, setVisibleMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
-  const { byDay, loading, toggleReminder } = useMeetingsMonth(visibleMonth);
+  const { byDay, loading, toggleReminder, setRsvp } = useMeetingsMonth(visibleMonth);
 
   const grid = buildGrid(visibleMonth);
   const selectedMeetings = (byDay[dayKey(selectedDate)] || []).slice().sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
@@ -152,12 +217,20 @@ export default function MeetingsCard({ basePath }) {
           ) : (
             <ul className="flex flex-col divide-y divide-line">
               {selectedMeetings.map((meeting) => (
-                <li key={meeting.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                  <div className="w-16 shrink-0">
-                    <p className="text-sm font-medium text-ink">{formatTime(meeting.startTime)}</p>
+                <li key={meeting.id} className="flex flex-col gap-2 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 shrink-0">
+                      <p className="text-sm font-medium text-ink">{formatTime(meeting.startTime)}</p>
+                    </div>
+                    <p className="min-w-0 flex-1 truncate text-sm text-ink-soft">{meeting.title}</p>
+                    <Toggle checked={meeting.reminderEnabled} onChange={() => toggleReminder(meeting)} />
                   </div>
-                  <p className="min-w-0 flex-1 truncate text-sm text-ink-soft">{meeting.title}</p>
-                  <Toggle checked={meeting.reminderEnabled} onChange={() => toggleReminder(meeting)} />
+                  <div className="flex items-center justify-between gap-3 pl-[76px]">
+                    <AttendeeStack attendees={meeting.attendees} />
+                    {meeting.isAttendee && (
+                      <RsvpControl status={meeting.myRsvpStatus} onChange={(status) => setRsvp(meeting, status)} />
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

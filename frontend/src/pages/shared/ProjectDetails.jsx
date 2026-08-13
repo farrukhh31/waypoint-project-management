@@ -581,7 +581,7 @@ export default function ProjectDetails({ tasksBasePath }) {
                         type="button"
                         onClick={() => handleRemoveMember(member.id)}
                         disabled={removingId === member.id}
-                        className="rounded p-1 text-ink-muted opacity-0 transition-opacity hover:bg-danger-50 hover:text-danger-600 disabled:opacity-50 group-hover/row:opacity-100"
+                        className="rounded p-1 text-ink-muted opacity-100 transition-opacity hover:bg-danger-50 hover:text-danger-600 disabled:opacity-50 sm:opacity-0 sm:group-hover/row:opacity-100 sm:group-focus-within/row:opacity-100"
                         aria-label={`Remove ${member.name}`}
                       >
                         <X className="h-3.5 w-3.5" />

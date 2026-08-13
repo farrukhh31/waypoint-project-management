@@ -1,5 +1,6 @@
 const { Notification, User } = require('../models');
 const { sendMail } = require('./mailService');
+const { buildNotificationEmail } = require('./emailTemplates');
 
 let ioInstance = null;
 
@@ -33,12 +34,18 @@ async function notifyUser({ userId, type, message, link }) {
 
   if (recipient.emailNotifications && recipient.email) {
     // Fire-and-forget — a slow/failed email should never block or fail the
-    // in-app notification, which is the primary channel.
-    sendMail({
-      to: recipient.email,
-      subject: 'New notification from Waypoint',
-      text: message,
-    }).catch((err) => console.error('[notificationService] email send failed:', err.message));
+    // in-app notification, which is the primary channel. Subject/body are
+    // type-specific and include a real link back into the app (see
+    // emailTemplates.js) rather than a generic "you have a notification".
+    const { subject, text, html } = buildNotificationEmail({
+      type,
+      message,
+      link,
+      recipientName: recipient.name,
+    });
+    sendMail({ to: recipient.email, subject, text, html }).catch((err) =>
+      console.error('[notificationService] email send failed:', err.message)
+    );
   }
 
   return notification;

@@ -19,7 +19,7 @@ import { formatRelativeTime } from '../../utils/formatDate';
 // Mirrors ActivityTimeline's per-project action copy, plus a tone so each
 // row gets a small colored badge instead of a plain bullet — same
 // project/task/team palette the weekly pill chart and trend line use.
-const ACTION_META = {
+export const ACTION_META = {
   project_created: { label: 'created the project', icon: FolderPlus, tone: 'route' },
   project_updated: { label: 'updated the project details', icon: Pencil, tone: 'route' },
   project_submitted: { label: 'submitted the project for approval', icon: Send, tone: 'sky' },
@@ -33,7 +33,7 @@ const ACTION_META = {
   discussion_added: { label: 'commented', icon: MessageSquare, tone: 'teal' },
 };
 
-const TONE_DOT = {
+export const TONE_DOT = {
   route: 'bg-route-500',
   accent: 'bg-accent-400',
   success: 'bg-success-400',
@@ -43,7 +43,7 @@ const TONE_DOT = {
   ink: 'bg-ink-muted/60',
 };
 
-function describe(log) {
+export function describe(log) {
   return ACTION_META[log.action] || { label: log.action.replace(/_/g, ' '), icon: ActivityIcon, tone: 'ink' };
 }
 

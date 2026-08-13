@@ -13,7 +13,13 @@ export default function Card({ className, children, ...props }) {
 
 export function CardHeader({ className, children, ...props }) {
   return (
-    <div className={clsx('flex items-center justify-between border-b border-line px-5 py-4', className)} {...props}>
+    <div
+      className={clsx(
+        'flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3.5 sm:px-5 sm:py-4',
+        className
+      )}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -21,7 +27,7 @@ export function CardHeader({ className, children, ...props }) {
 
 export function CardBody({ className, children, ...props }) {
   return (
-    <div className={clsx('p-5', className)} {...props}>
+    <div className={clsx('p-4 sm:p-5', className)} {...props}>
       {children}
     </div>
   );

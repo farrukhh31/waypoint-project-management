@@ -270,7 +270,7 @@ export default function Notifications() {
                                   e.stopPropagation();
                                   markRead(n.id);
                                 }}
-                                className="text-xs font-medium text-route-600 opacity-0 transition-opacity hover:underline group-hover:opacity-100"
+                                className="text-xs font-medium text-route-600 opacity-100 transition-opacity hover:underline sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                               >
                                 Mark as read
                               </button>

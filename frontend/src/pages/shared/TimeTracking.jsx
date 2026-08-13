@@ -168,7 +168,7 @@ function HistoryRow({ entry, onEdit, onDelete }) {
       <p className="w-20 shrink-0 text-right font-mono text-sm font-semibold tabular-nums text-ink">
         {formatDuration(entry.elapsedSeconds)}
       </p>
-      <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
         <button type="button" onClick={() => onEdit(entry)} className="rounded p-1.5 text-ink-muted hover:bg-paper hover:text-ink" aria-label="Edit">
           <Pencil className="h-3.5 w-3.5" />
         </button>

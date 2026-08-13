@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Crown, Flag, Pencil, Trash2, ListChecks, AlertTriangle, Flame } from 'lucide-react';
 import clsx from 'clsx';
@@ -26,7 +27,10 @@ const PRIORITY_FLAG = {
 // "progress along a route" motif used everywhere else in the app (see
 // utils/formatDate.js#timeElapsedPct).
 
-export default function ProjectCard({ project, basePath, canManage = false, onEdit, onDelete, style }) {
+// Rendered many-at-once in the Projects grid, so it's memoized — with a
+// grid of 20+ cards, re-rendering every card on any unrelated state change
+// in the parent (a filter keystroke, a modal toggling) gets expensive fast.
+function ProjectCard({ project, basePath, canManage = false, onEdit, onDelete, style }) {
   const tone = STATUS_TONE[project.status] || STATUS_TONE.PLANNED;
   const progress = project.progress ?? { total: 0, completed: 0 };
   const progressPct = progress.total ? Math.round((progress.completed / progress.total) * 100) : 0;
@@ -66,9 +70,11 @@ export default function ProjectCard({ project, basePath, canManage = false, onEd
           {/* Status accent bar */}
           <div className={clsx('relative h-[3px] w-full shrink-0', tone.bar)} />
 
-          {/* Admin quick actions — float in on hover, never steal the click */}
+          {/* Admin quick actions — float in on hover, never steal the click.
+              Always visible on touch (no hover to reveal them there);
+              fades in on hover only once a pointer is available. */}
           {canManage && (
-            <div className="absolute right-3 top-4 z-10 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <div className="absolute right-3 top-4 z-10 flex items-center gap-1 opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
               <button
                 type="button"
                 onClick={(e) => stop(e, onEdit)}
@@ -179,3 +185,5 @@ export default function ProjectCard({ project, basePath, canManage = false, onEd
     </TiltCard>
   );
 }
+
+export default memo(ProjectCard);

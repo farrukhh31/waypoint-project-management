@@ -15,9 +15,8 @@ import TimelineWidget from '../../components/dashboard/TimelineWidget.jsx';
 import SectionHeading from '../../components/dashboard/SectionHeading.jsx';
 import StatusBreakdown from '../../components/dashboard/StatusBreakdown.jsx';
 import DeadlinesPanel from '../../components/dashboard/DeadlinesPanel.jsx';
-import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
+import ActivityTimeline from '../../components/dashboard/ActivityTimeline.jsx';
 import DeadlineCounter from '../../components/dashboard/DeadlineCounter.jsx';
-import OrgActivityFeed from '../../components/dashboard/OrgActivityFeed.jsx';
 import TeamPerformance from '../../components/dashboard/TeamPerformance.jsx';
 import TimeTrackingCard from '../../components/dashboard/TimeTrackingCard.jsx';
 import MeetingsCard from '../../components/dashboard/MeetingsCard.jsx';
@@ -53,6 +52,15 @@ export default function TeamDashboard() {
       .filter((entry) => entry.tasks.length > 0);
   }, [projects, tasks]);
 
+  // useTimeline() returns every task across the projects this member sits
+  // on (needed for TimelineWidget's roadmap and the contributor rosters
+  // above), not just this member's own work. DeadlineCounter is the one
+  // "what's coming up for me" banner though, so it needs to be filtered
+  // down to tasks actually assigned to this member — otherwise it counts
+  // teammates' deadlines too and disagrees with the assignee-scoped
+  // DeadlinesPanel/stats lower on the same page.
+  const myTasks = useMemo(() => tasks.filter((t) => t.assignee?.id === user?.id), [tasks, user]);
+
   if (loading) return <FullScreenLoader />;
 
   const stats = data?.stats ?? {};
@@ -72,7 +80,7 @@ export default function TeamDashboard() {
 
       {!timelineLoading && (
         <Reveal delay={20}>
-          <DeadlineCounter tasks={tasks} projects={projects} tasksPath="/team/tasks" />
+          <DeadlineCounter tasks={myTasks} projects={projects} tasksPath="/team/tasks" />
         </Reveal>
       )}
 
@@ -211,25 +219,20 @@ export default function TeamDashboard() {
         </div>
       </div>
 
-      {/* Activity — a quick weekly pulse plus the detailed feed, both
-          scoped to just the projects this member sits on. */}
+      {/* Activity — one premium widget, weekly pulse plus the detailed
+          feed, both scoped to just the projects this member sits on. */}
       <div className="flex flex-col gap-4">
         <Reveal delay={40}>
           <SectionHeading eyebrow="Activity" title="Recent activity" description="Project and task movement on your projects." />
         </Reveal>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Reveal delay={80}>
-            <ActivityFeed activityByDay={data?.activityByDay} />
-          </Reveal>
-          <Reveal delay={120}>
-            <OrgActivityFeed
-              logs={data?.recentActivity}
-              basePath="/team/projects"
-              title="Detailed feed"
-              subtitle="Across your projects"
-            />
-          </Reveal>
-        </div>
+        <Reveal delay={80}>
+          <ActivityTimeline
+            activityByDay={data?.activityByDay}
+            logs={data?.recentActivity}
+            basePath="/team/projects"
+            subtitle="Across your projects"
+          />
+        </Reveal>
       </div>
     </div>
   );

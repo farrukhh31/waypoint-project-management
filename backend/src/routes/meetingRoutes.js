@@ -7,6 +7,7 @@ const {
   createMeetingSchema,
   updateMeetingSchema,
   reminderSchema,
+  rsvpSchema,
   idParamSchema,
 } = require('../validators/meetingValidators');
 
@@ -26,6 +27,7 @@ router.patch(
   validate({ params: idParamSchema, body: reminderSchema }),
   meetingController.toggleReminder
 );
+router.patch('/:id/rsvp', validate({ params: idParamSchema, body: rsvpSchema }), meetingController.setRsvp);
 router.delete('/:id', validate({ params: idParamSchema }), meetingController.deleteMeeting);
 
 module.exports = router;

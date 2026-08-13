@@ -12,6 +12,13 @@ MeetingAttendee.init(
     meetingId: { type: DataTypes.UUID, allowNull: false },
     userId: { type: DataTypes.UUID, allowNull: false },
     reminderEnabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    // Whether this attendee is actually coming — organizer included, so a
+    // meeting's own creator shows up in the same head-count as everyone else.
+    rsvpStatus: {
+      type: DataTypes.ENUM('PENDING', 'ACCEPTED', 'DECLINED', 'TENTATIVE'),
+      allowNull: false,
+      defaultValue: 'PENDING',
+    },
   },
   {
     sequelize,

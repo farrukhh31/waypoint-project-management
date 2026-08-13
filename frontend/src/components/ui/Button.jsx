@@ -25,8 +25,8 @@ export default function Button({
   return (
     <button
       className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded font-medium transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded font-medium transition-all duration-150 active:scale-[0.97]',
+        'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         VARIANTS[variant],
         SIZES[size],
         className
